@@ -4,4 +4,7 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scene/ScoreSheet.unity
+    guid: e4f76f8ad2edbd745bfb9d2f1e1f5ed9
