@@ -19,6 +19,13 @@ public class ElecAnimationMale : MonoBehaviour
 	[SerializeField]
 	private float stride = 0;
 	//重複歩数
+	public int experimentNum = 0;
+	/*
+	public static int ExperimentNum{
+		get{ return experimentNum;}
+		private set{ experimentNum = value;}
+	}
+	*/
 	public float maxStride;
 	private bool isWalk = false;
 	public float ch1;
@@ -82,7 +89,6 @@ public class ElecAnimationMale : MonoBehaviour
 	void Start ()
 	{
 		anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
-
 		//footSoundLeft = transform.Find (gameObject.name + "/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
 		//footSoundRight = transform.Find (gameObject.name + "/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
 		client1 = new UdpClient ();
@@ -177,9 +183,13 @@ public class ElecAnimationMale : MonoBehaviour
 		} else if (Input.GetKeyDown (KeyCode.Q) || stride == maxStride) {
 			stride = 0;//重複歩の初期化
 			if (lastStimulation) {
+				experimentNum = 0;
+				ExperimetParamaters.ExperimentNum = experimentNum;
 				audioSourse.clip = clip3;
 				audioSourse.Play ();
 			} else {
+				experimentNum += 1;
+				ExperimetParamaters.ExperimentNum = experimentNum;
 				audioSourse.clip = clip2;
 				audioSourse.Play ();
 			}

@@ -3,31 +3,34 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
+using System.Text;
 
 public class ScoreSheet : MonoBehaviour {
 
 	public string participantName;
 	[SerializeField]
 	private int questionNum;//質問数
-	private string[,] csv;
 	[SerializeField]
 	private string[] _text;
 	[SerializeField]
 	private string[] _minimumText;
 	[SerializeField]
 	private string[] _maximumText;
-	public TextAsset scoreSheetTemplate;
+	private string templatePath;//テンプレートのパス
+	private string[] resultPath;//結果CSVのパス
+	//public TextAsset scoreSheetTemplate;
+	public string scoreSheetTemplate;
 	public Canvas canvas;
 	private Text[] question;
 	private Text[] text;
 	private Text[] minimumText;
 	private Text[] maximumText;
 	private Slider[] slider;
-	static private List<List<float>> scores = new List<List<float>>(); 
+	private List<List<float>> scores = new List<List<float>>(); 
 	// Use this for initializatio
 	void Start () {
 		//ExperimentNumが0のときExitExperimentボタンを表示、0以外のときNextExperimentボタンを表示
-		if (ElecAnimationMale.ExperimentNum == 0) {
+		if (ExperimetParamaters.ExperimentNum == 0) {
 			GameObject.Find ("NextExperiment").SetActive (false);
 			GameObject.Find ("ExitExperiment").SetActive (true);
 		} else {
@@ -35,13 +38,18 @@ public class ScoreSheet : MonoBehaviour {
 			GameObject.Find ("ExitExperiment").SetActive (false);
 		}
 
-		scoreSheetTemplate = Resources.Load ("csv/ScoreSheetTemplate", typeof(TextAsset)) as TextAsset;
-		string[] lineText = scoreSheetTemplate.text.Split ('\n');
-		lineText = scoreSheetTemplate.text.Split ('\n');
+		templatePath = Application.dataPath + "/CSV/ScoreSheetTemplate.csv";//テンプレートのパス
+		StreamReader reader = new StreamReader (
+			templatePath,
+			Encoding.GetEncoding ("utf-8")
+		);
+		scoreSheetTemplate = reader.ReadToEnd ();
+		string[] lineText = scoreSheetTemplate.Split ('\n');
+		lineText = scoreSheetTemplate.Split ('\n');
 		questionNum = lineText.Length - 1;
 		int columNum = lineText[0].Split(',').Length;
 		int lineNum = questionNum + 1;
-		csv = new string[lineNum,columNum];
+		string[,] csv = new string[lineNum,columNum];
 		for (int i = 0; i < lineNum; i++) {
 			for (int j = 0; j < columNum; j++) {
 				string[] words = lineText [i].Split (',');
@@ -56,6 +64,7 @@ public class ScoreSheet : MonoBehaviour {
 			_minimumText [i] = csv [i+1,2];
 			_maximumText [i] = csv [i+1,3];		
 		}
+
 		question = new Text[questionNum];
 		text = new Text[questionNum];
 		minimumText = new Text[questionNum];
@@ -127,13 +136,23 @@ public class ScoreSheet : MonoBehaviour {
 	public void OnNextExperiment () {
 		List<float> score = new List<float> ();
 		for (int i = 0; i < questionNum; i++) {
-			score.Add (slider [i].value);
+			score.Add (slider[i].value);
 		}
-		scores.Add (score);
+		ExperimetParamaters.Scores.Add (score);
 	}
 
 	public void OnExitExperiment () {
-		
+		FileInfo[] fi = new FileInfo[questionNum]; 
+		for (int i = 0; i < questionNum; i++) {
+			resultPath[i] =  Application.dataPath + "/CSV/resultQuestion" + (i+1) + ".csv";
+			fi [i] = new FileInfo (resultPath [i]);
+			StreamWriter sw = fi [i].AppendText ();
+			sw.WriteLine ("xxx");
+			sw.Flush ();
+			sw.Close ();
+		}
+	}
+	private void ReadTemplate(){
 
 	}
 }
