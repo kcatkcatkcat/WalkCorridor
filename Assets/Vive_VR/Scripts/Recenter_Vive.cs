@@ -15,7 +15,7 @@ public class Recenter_Vive : MonoBehaviour
 
 	public void ResetCamera ()
 	{
-		SteamVR.instance.hmd.ResetSeatedZeroPose ();
+		//SteamVR.instance.hmd.ResetSeatedZeroPose ();
 		Debug.Log ("ResetPos");
 	}
 

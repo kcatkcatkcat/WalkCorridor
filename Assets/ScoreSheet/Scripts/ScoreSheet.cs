@@ -6,63 +6,91 @@ using System.IO;
 using System.Text;
 
 public class ScoreSheet : MonoBehaviour {
-
+	[SerializeField]
+	private ExperimentParamaters experimentParamaters;
 	public string participantName;
 	[SerializeField]
 	private int questionNum;//質問数
 	[SerializeField]
+	public int stimuliNum = 5;//提示刺激数
+	public int stimuli;//現在の刺激番号
 	private string[] _text;
-	[SerializeField]
 	private string[] _minimumText;
-	[SerializeField]
 	private string[] _maximumText;
 	private string templatePath;//テンプレートのパス
 	private string[] resultPath;//結果CSVのパス
+	private FileInfo templateFi;
+	private FileInfo[] resultFi;
 	//public TextAsset scoreSheetTemplate;
-	public string scoreSheetTemplate;
 	public Canvas canvas;
 	private Text[] question;
 	private Text[] text;
 	private Text[] minimumText;
 	private Text[] maximumText;
 	private Slider[] slider;
-	private List<List<float>> scores = new List<List<float>>(); 
 	// Use this for initializatio
 	void Start () {
+		experimentParamaters = GameObject.Find ("ExperimentManager").GetComponent<ExperimentParamaters> ();
+		templatePath = Application.dataPath + "/CSV/ScoreSheetTemplate.csv";//テンプレートのパス
+		templateFi = new FileInfo (templatePath);//テンプレートのFileInfo
+		questionNum = csvLineNumber(templateFi) - 1;
+		resultPath = new string[questionNum];
+		resultFi = new FileInfo[questionNum];
+		List<string> listTemp1 = new List<string>();;
+		List<List<string>> listTemp2 = new List<List<string>>();;
+		List<List<List<string>>> listTemp3 = new List<List<List<string>>>();
+		for (int i = 0; i < questionNum; i++) {
+			resultPath[i] =  Application.dataPath + "/CSV/resultQuestion" + (i+1) + ".csv";
+			resultFi [i] = new FileInfo (resultPath [i]);
+			if (!resultFi [i].Exists) {//s同名のファイルがなければ何もしない
+				StreamWriter sw = resultFi [i].CreateText ();
+				sw.WriteLine ("Question" + (i+1));
+				for(int j = 0; j < stimuliNum; j++){
+					sw.WriteLine("stimulation" + (j+1));
+				}
+				sw.Flush ();
+				sw.Close ();
+			} else {//同名のファイルが見つかれば読み取り、Listに格納
+				string[,] temp =  csvRead(resultFi[i]);
+				//Debug.Log (temp.GetLength(0));
+				//Debug.Log (temp.GetLength(1));
+				for (int j = 0; j < temp.GetLength (0); j++) {
+					for (int k = 0; k < temp.GetLength (1); k++) {
+
+						listTemp1.Add (temp [j, k]);
+					}
+					listTemp2.Add (listTemp1);
+					listTemp1 = new List<string>();
+				}
+				listTemp3.Add (listTemp2);
+				listTemp2 = new List<List<string>>();
+			}
+		}
+		experimentParamaters.Scores = listTemp3;
+		listTemp3 = new List<List<List<string>>>();
+		Debug.Log (experimentParamaters.Scores.Count);
+		Debug.Log (experimentParamaters.Scores[0].Count);
+		Debug.Log (experimentParamaters.Scores[0][0].Count);
+		stimuli = experimentParamaters.Stimuli;
+
+
 		//ExperimentNumが0のときExitExperimentボタンを表示、0以外のときNextExperimentボタンを表示
-		if (ExperimetParamaters.ExperimentNum == 0) {
+		if (experimentParamaters.ExperimentNum == 0) {
 			GameObject.Find ("NextExperiment").SetActive (false);
 			GameObject.Find ("ExitExperiment").SetActive (true);
 		} else {
 			GameObject.Find ("NextExperiment").SetActive (true);
 			GameObject.Find ("ExitExperiment").SetActive (false);
 		}
-
-		templatePath = Application.dataPath + "/CSV/ScoreSheetTemplate.csv";//テンプレートのパス
-		StreamReader reader = new StreamReader (
-			templatePath,
-			Encoding.GetEncoding ("utf-8")
-		);
-		scoreSheetTemplate = reader.ReadToEnd ();
-		string[] lineText = scoreSheetTemplate.Split ('\n');
-		lineText = scoreSheetTemplate.Split ('\n');
-		questionNum = lineText.Length - 1;
-		int columNum = lineText[0].Split(',').Length;
-		int lineNum = questionNum + 1;
-		string[,] csv = new string[lineNum,columNum];
-		for (int i = 0; i < lineNum; i++) {
-			for (int j = 0; j < columNum; j++) {
-				string[] words = lineText [i].Split (',');
-				csv [i,j] = words[j];
-			}
-		}
+			
 		_text = new string[questionNum];
 		_minimumText = new string[questionNum];
 		_maximumText = new string[questionNum];
+
 		for(int i = 0; i < questionNum; i++){
-			_text [i] = csv [i+1,1];
-			_minimumText [i] = csv [i+1,2];
-			_maximumText [i] = csv [i+1,3];		
+			_text [i] = csvRead(templateFi) [i+1,1];
+			_minimumText [i] = csvRead(templateFi) [i+1,2];
+			_maximumText [i] = csvRead(templateFi) [i+1,3];		
 		}
 
 		question = new Text[questionNum];
@@ -130,29 +158,90 @@ public class ScoreSheet : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
+		//test
+		if (Input.GetKeyDown (KeyCode.Space)) {
+			for (int i = 0; i < experimentParamaters.Scores.Count; i++) {
+				if(experimentParamaters.ExperimentNum == 1) experimentParamaters.Scores [i] [0].Add (participantName);
+				experimentParamaters.Scores [i] [stimuli + 1].Add (slider [i].value.ToString());
+
+				if (resultFi [i].Exists) resultFi [i].Delete ();
+				resultFi [i] = new FileInfo (resultPath [i]);
+				StreamWriter sw = resultFi [i].CreateText ();
+				string writeText = "";
+				for (int j = 0; j < experimentParamaters.Scores [i].Count; j++) {
+					for (int k = 0; k < experimentParamaters.Scores [i] [j].Count; k++) {
+						if (k < experimentParamaters.Scores [i] [j].Count - 1) {
+							writeText += experimentParamaters.Scores [i] [j] [k] + ",";
+						} else {
+							writeText += experimentParamaters.Scores [i] [j] [k];
+						}
+					}
+					sw.WriteLine (writeText);
+                    writeText = "";
+                }
+				sw.Flush ();
+				sw.Close ();
+			}
+		}
 	}
 
 	public void OnNextExperiment () {
-		List<float> score = new List<float> ();
-		for (int i = 0; i < questionNum; i++) {
-			score.Add (slider[i].value);
-		}
-		ExperimetParamaters.Scores.Add (score);
+		//stimuli = ExperimentParamaters.Stimuli;
+
+
 	}
 
 	public void OnExitExperiment () {
-		FileInfo[] fi = new FileInfo[questionNum]; 
-		for (int i = 0; i < questionNum; i++) {
-			resultPath[i] =  Application.dataPath + "/CSV/resultQuestion" + (i+1) + ".csv";
-			fi [i] = new FileInfo (resultPath [i]);
-			StreamWriter sw = fi [i].AppendText ();
-			sw.WriteLine ("xxx");
-			sw.Flush ();
-			sw.Close ();
+		
+	}
+
+
+	private string[,] csvRead(FileInfo fi){
+		if (!fi.Exists) {
+			throw new FileNotFoundException ();
+		} else {
+			StreamReader sr = fi.OpenText ();
+			string text = sr.ReadToEnd ();
+			sr.Close ();
+			string[] lineText = text.Split ('\n');
+			lineText = text.Split ('\n');
+			int columNum = lineText[0].Split(',').Length;
+			int lineNum = lineText.Length - 1;
+			string[,] csv = new string[lineNum,columNum];
+			for (int i = 0; i < lineNum; i++) {
+				for (int j = 0; j < columNum; j++) {
+					string[] words = lineText [i].Split (',');
+					csv [i,j] = words[j];
+				}
+			}
+			return csv;
 		}
 	}
-	private void ReadTemplate(){
 
+	private int csvLineNumber(FileInfo fi){
+		if (!fi.Exists) {
+			throw new FileNotFoundException ();
+		} else {
+			StreamReader sr = fi.OpenText ();
+			string text = sr.ReadToEnd ();
+			string[] lineText = text.Split ('\n');
+			sr.Close ();
+			return lineText.Length -1;
+		}
+	
 	}
+	private int csvColumnNumber(FileInfo fi){
+		if (!fi.Exists) {
+			throw new FileNotFoundException ();
+		} else {
+			StreamReader sr = fi.OpenText ();
+			string text = sr.ReadToEnd ();
+			string[] lineText = text.Split ('\n');
+			lineText = text.Split ('\n');
+			sr.Close ();
+			return lineText [0].Split (',').Length;
+		}
+	}
+
+
 }

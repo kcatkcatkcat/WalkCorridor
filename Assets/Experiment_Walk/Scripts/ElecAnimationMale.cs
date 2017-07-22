@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public class ElecAnimationMale : MonoBehaviour
 {
-
+	private ExperimentParamaters experimentParamaters;
 	private Animator anim;
 	//被験者キャラクターのアニメーター
 	[SerializeField]
@@ -17,16 +17,14 @@ public class ElecAnimationMale : MonoBehaviour
 	[SerializeField]
 	private AudioSource footSoundRight;
 	[SerializeField]
-	private float stride = 0;
-	//重複歩数
-	public int experimentNum = 0;
-	/*
-	public static int ExperimentNum{
-		get{ return experimentNum;}
-		private set{ experimentNum = value;}
-	}
-	*/
-	public float maxStride;
+	private float stride = 0;//重複歩数
+	[SerializeField]
+	private int stimuli;//刺激番号
+	private int stimuliNum　= 7;//刺激数(vision, kinesthetic, electricalの組み合わせ[ただし全てfalseは除く])
+	[SerializeField]
+	private int experimentNum = 0;//実験番号－１ ※最後の実験後0をExperimentParamatersに送る
+	public string participantName;//被験者の名前
+	private float maxStride = 27;//通路末端までの重複歩数
 	private bool isWalk = false;
 	public float ch1;
 	public float ch2;
@@ -37,18 +35,21 @@ public class ElecAnimationMale : MonoBehaviour
 	public float ch7;
 	public float ch8;
 
-	public float waitTime;
-	public bool vision;
-	public bool kinesthetic;
-	public bool electrical;
+	private float waitTime = 0.4f;//映像と下肢駆動装置がずれる場合、要調整
+	[SerializeField]
+	private bool vision;
+	[SerializeField]
+	private bool kinesthetic;
+	[SerializeField]
+	private bool electrical;
 	public bool lastStimulation;
 
 	private AudioSource audioSourse;
 	public AudioClip clip1;
 	public AudioClip clip2;
 	public AudioClip clip3;
-
 	public Recenter_Vive recenter_Vive;
+
     public Recenter_Oculus recenter_Oculus;
 
     public enum HMD_Type
@@ -88,9 +89,10 @@ public class ElecAnimationMale : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
+		experimentParamaters = GameObject.Find ("ExperimentManager").GetComponent<ExperimentParamaters> ();
 		anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
-		//footSoundLeft = transform.Find (gameObject.name + "/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
-		//footSoundRight = transform.Find (gameObject.name + "/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
+		footSoundLeft = transform.Find (gameObject.name + "/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
+		footSoundRight = transform.Find (gameObject.name + "/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
 		client1 = new UdpClient ();
 		client2 = new UdpClient ();
 
@@ -165,6 +167,7 @@ public class ElecAnimationMale : MonoBehaviour
 	void Update ()
 	{
 		if (Input.GetKeyDown (KeyCode.S)) {
+			stimuli =  randomStimuliGenerator ();
 			audioSourse.clip = clip1;
 			audioSourse.Play ();
 			byte[] sceneCommand = new byte[6];
@@ -184,12 +187,12 @@ public class ElecAnimationMale : MonoBehaviour
 			stride = 0;//重複歩の初期化
 			if (lastStimulation) {
 				experimentNum = 0;
-				ExperimetParamaters.ExperimentNum = experimentNum;
+				experimentParamaters.ExperimentNum = experimentNum;
 				audioSourse.clip = clip3;
 				audioSourse.Play ();
 			} else {
 				experimentNum += 1;
-				ExperimetParamaters.ExperimentNum = experimentNum;
+				experimentParamaters.ExperimentNum = experimentNum;
 				audioSourse.clip = clip2;
 				audioSourse.Play ();
 			}
@@ -207,6 +210,8 @@ public class ElecAnimationMale : MonoBehaviour
 			anim.SetBool ("isWalk", isWalk);
             All_HMD_FadeOut();
 			StartCoroutine ("ResetPosition");
+			giveExperimentInfo ();//ExperimentParamatersにパラメータを格納
+
 
 			Initialize ();
 
@@ -311,5 +316,67 @@ public class ElecAnimationMale : MonoBehaviour
 		while (true) {
 
 		}
+	}
+
+	private void giveExperimentInfo(){//ExperimentParamatersにパラメータを格納
+		experimentParamaters.ParticipantName = participantName;
+		experimentParamaters.ExperimentNum = experimentNum;
+	}
+
+	private void stimuliCombination(int num){//刺激番号とそれぞれの刺激の対応
+		switch (num) {
+		case 0:
+			vision = false;
+			kinesthetic = false;
+			electrical = true;
+			break;
+
+		case 1:
+			vision = false;
+			kinesthetic = true;
+			electrical = false;
+			break;
+
+		case 2:
+			vision = false;
+			kinesthetic = true;
+			electrical = true;
+			break;
+
+		case 3:
+			vision = true;
+			kinesthetic = false;
+			electrical = false;
+			break;
+
+		case 4:
+			vision = true;
+			kinesthetic = false;
+			electrical = true;
+			break;
+
+		case 5:
+			vision = true;
+			kinesthetic = true;
+			electrical = false;
+			break;
+
+		case 6:
+			vision = true;
+			kinesthetic = true;
+			electrical = true;
+			break;
+		}
+	}
+
+	private int randomStimuliGenerator(){//提示刺激のランダム生成機
+		int x = new int();
+		x = Random.Range (0, 7);
+		while (experimentParamaters.conductedStimuliNum.Contains (x) || x == 7) {
+			x = Random.Range (0, 7);
+		}
+		experimentParamaters.conductedStimuliNum.Add (x);
+		stimuliCombination (x);
+		return x;
 	}
 }
