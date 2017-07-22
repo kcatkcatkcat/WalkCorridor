@@ -199,17 +199,6 @@ public class ElecAnimationMale : MonoBehaviour
 
 		} else if (Input.GetKeyDown (KeyCode.Q) || stride == maxStride) {
             stride = 0;//重複歩の初期化
-            if (lastStimulation) {
-                experimentNum = 0;
-				experimentParamaters.ExperimentNum = experimentNum;
-				audioSourse.clip = clip3;
-				audioSourse.Play ();
-			} else {
-                experimentNum += 1;
-				experimentParamaters.ExperimentNum = experimentNum;
-				audioSourse.clip = clip2;
-				audioSourse.Play ();
-			}
 			byte[] sceneCommand = new byte[6];
 			sceneCommand [0] = 0x31;  // change scene command
 			sceneCommand [1] = 0x01;  // number of data
@@ -217,12 +206,37 @@ public class ElecAnimationMale : MonoBehaviour
 			sceneCommand [3] = 0x00;  // number of data
 			sceneCommand [4] = 0x00;  // number of data
 			sceneCommand [5] = 0x00;  // number of data
-			if (kinesthetic)
-				client1.Send (sceneCommand, sceneCommand.Length);
+            if (kinesthetic)
+                client1.Send(sceneCommand, sceneCommand.Length);
+
+            if (lastStimulation)
+            {
+                experimentNum = 0;
+                experimentParamaters.ExperimentNum = experimentNum;
+                audioSourse.clip = clip3;
+                audioSourse.Play();
+            }
+            else
+            {
+                experimentNum += 1;
+                experimentParamaters.ExperimentNum = experimentNum;
+                audioSourse.clip = clip2;
+                audioSourse.Play();
+            }
 
             isWalk = false;
             anim.SetBool("isWalk", isWalk);
             All_HMD_FadeOut();
+            switch (hmd_Type)
+            {
+                case HMD_Type.Oculus:
+                    recenter_Oculus.SceneChange("ScoreSheet");
+                    break;
+                case HMD_Type.Vive:
+                    recenter_Vive.SceneChange("ScoreSheet");
+                    break;
+            }
+            
             StartCoroutine("ResetPosition");
             giveExperimentInfo();//ExperimentParamatersにパラメータを格納
 

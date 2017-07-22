@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.VR;
+using UnityEngine.SceneManagement;
 
 public class Recenter_Oculus : MonoBehaviour
 {
@@ -9,7 +10,7 @@ public class Recenter_Oculus : MonoBehaviour
 
 	void Start ()
 	{
-		//fade = GameObject.Find(gameObject.name + "/Fade");
+		fade = GameObject.Find(gameObject.name + "/Fade");
 	}
 	
 
@@ -28,4 +29,9 @@ public class Recenter_Oculus : MonoBehaviour
 	{
 		iTween.FadeTo (fade, 1f, 2f);
 	}
+
+    public void SceneChange(string scene)
+    {
+        SceneManager.LoadScene(scene);
+    }
 }
