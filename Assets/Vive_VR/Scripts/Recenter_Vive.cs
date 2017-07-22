@@ -10,12 +10,12 @@ public class Recenter_Vive : MonoBehaviour
 
 	void Start ()
 	{
-		//fade = GameObject.Find ("Camera(head)/Camera(eye)/Fade");
+		fade = GameObject.Find (gameObject.name +  "/Camera(head)/Camera(eye)/Fade");
 	}
 
 	public void ResetCamera ()
 	{
-		//SteamVR.instance.hmd.ResetSeatedZeroPose ();
+		SteamVR.instance.hmd.ResetSeatedZeroPose ();
 		Debug.Log ("ResetPos");
 	}
 
