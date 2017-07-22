@@ -9,7 +9,7 @@ public class Recenter_Oculus : MonoBehaviour
 
 	void Start ()
 	{
-		//fade = transform.FindChild ("Fade").gameObject;
+		//fade = GameObject.Find(gameObject.name + "/Fade");
 	}
 	
 

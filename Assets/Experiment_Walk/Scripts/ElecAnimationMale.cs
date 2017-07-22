@@ -48,8 +48,8 @@ public class ElecAnimationMale : MonoBehaviour
 	public AudioClip clip1;
 	public AudioClip clip2;
 	public AudioClip clip3;
-	public Recenter_Vive recenter_Vive;
 
+	public Recenter_Vive recenter_Vive;
     public Recenter_Oculus recenter_Oculus;
 
     public enum HMD_Type
@@ -91,9 +91,23 @@ public class ElecAnimationMale : MonoBehaviour
 	{
 		experimentParamaters = GameObject.Find ("ExperimentManager").GetComponent<ExperimentParamaters> ();
 		anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
-		footSoundLeft = transform.Find (gameObject.name + "/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
-		footSoundRight = transform.Find (gameObject.name + "/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
-		client1 = new UdpClient ();
+		footSoundLeft = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
+		footSoundRight = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
+
+        switch (hmd_Type)
+        {
+            case HMD_Type.Oculus:
+                recenter_Oculus = GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").GetComponent<Recenter_Oculus>();
+                break;
+
+            case HMD_Type.Vive:
+                recenter_Vive = GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").GetComponent<Recenter_Vive>();
+                break;
+        }
+        
+        
+
+        client1 = new UdpClient ();
 		client2 = new UdpClient ();
 
 		/////////////UDP接続(研究室)//////////////////
@@ -184,14 +198,14 @@ public class ElecAnimationMale : MonoBehaviour
 
 
 		} else if (Input.GetKeyDown (KeyCode.Q) || stride == maxStride) {
-			stride = 0;//重複歩の初期化
-			if (lastStimulation) {
-				experimentNum = 0;
+            stride = 0;//重複歩の初期化
+            if (lastStimulation) {
+                experimentNum = 0;
 				experimentParamaters.ExperimentNum = experimentNum;
 				audioSourse.clip = clip3;
 				audioSourse.Play ();
 			} else {
-				experimentNum += 1;
+                experimentNum += 1;
 				experimentParamaters.ExperimentNum = experimentNum;
 				audioSourse.clip = clip2;
 				audioSourse.Play ();
@@ -206,14 +220,13 @@ public class ElecAnimationMale : MonoBehaviour
 			if (kinesthetic)
 				client1.Send (sceneCommand, sceneCommand.Length);
 
-			isWalk = false;
-			anim.SetBool ("isWalk", isWalk);
+            isWalk = false;
+            anim.SetBool("isWalk", isWalk);
             All_HMD_FadeOut();
-			StartCoroutine ("ResetPosition");
-			giveExperimentInfo ();//ExperimentParamatersにパラメータを格納
+            StartCoroutine("ResetPosition");
+            giveExperimentInfo();//ExperimentParamatersにパラメータを格納
 
-
-			Initialize ();
+            Initialize ();
 
 		}
 
@@ -221,8 +234,9 @@ public class ElecAnimationMale : MonoBehaviour
             All_HMD_CameraReset();
 		}
 
-		if (anim.GetCurrentAnimatorStateInfo (0).IsName ("Base Layer.HumanoidWalk")) {
+		if (anim.GetCurrentAnimatorStateInfo (0).IsName ("Base Layer.HumanoidWalk") && isWalk) {
 			stride = Mathf.Floor (anim.GetCurrentAnimatorStateInfo (0).normalizedTime);
+
 		}
 
 		if (isWalk)

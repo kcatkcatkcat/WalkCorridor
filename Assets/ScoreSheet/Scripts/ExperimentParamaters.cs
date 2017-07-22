@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class ExperimentParamaters : MonoBehaviour {
 	public int ExperimentNum;//実験番号　※0のとき最後の実験
@@ -20,16 +19,3 @@ public class ExperimentParamaters : MonoBehaviour {
 
 }
 
-public class ExperimentManager : MonoBehaviour
-{
-
-    public void SceneChange(string scene)
-    {
-        SceneManager.LoadScene(scene);
-    }
-
-    public void SceneChange_vive(string scene)
-    {
-
-    }
-}
