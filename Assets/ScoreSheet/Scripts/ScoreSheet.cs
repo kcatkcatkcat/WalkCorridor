@@ -8,7 +8,6 @@ using System.Text;
 public class ScoreSheet : MonoBehaviour {
 	[SerializeField]
 	private ExperimentParamaters experimentParamaters;
-	public string participantName;
 	[SerializeField]
 	private int questionNum;//質問数
 	[SerializeField]
@@ -27,6 +26,7 @@ public class ScoreSheet : MonoBehaviour {
 	private Text[] text;
 	private Text[] minimumText;
 	private Text[] maximumText;
+    [SerializeField]
 	private Slider[] slider;
 	// Use this for initializatio
 	void Start () {
@@ -52,8 +52,6 @@ public class ScoreSheet : MonoBehaviour {
 				sw.Close ();
 			} else {//同名のファイルが見つかれば読み取り、Listに格納
 				string[,] temp =  csvRead(resultFi[i]);
-				//Debug.Log (temp.GetLength(0));
-				//Debug.Log (temp.GetLength(1));
 				for (int j = 0; j < temp.GetLength (0); j++) {
 					for (int k = 0; k < temp.GetLength (1); k++) {
 
@@ -68,9 +66,6 @@ public class ScoreSheet : MonoBehaviour {
 		}
 		experimentParamaters.Scores = listTemp3;
 		listTemp3 = new List<List<List<string>>>();
-		Debug.Log (experimentParamaters.Scores.Count);
-		Debug.Log (experimentParamaters.Scores[0].Count);
-		Debug.Log (experimentParamaters.Scores[0][0].Count);
 		stimuli = experimentParamaters.Stimuli;
 
 
@@ -102,17 +97,17 @@ public class ScoreSheet : MonoBehaviour {
 		canvas = GameObject.Find ("ScoreSheet").GetComponent<Canvas>();
 		float partsPosX = 0;
 		float partsPosY = 0;
+        Slider s;
 		for (int i = 0; i < questionNum; i++) {
 			question [i] = Resources.Load ("prefabs/Question", typeof(Text)) as Text;
 			text [i] = Resources.Load ("prefabs/Text", typeof(Text))as Text;
 			minimumText [i] = Resources.Load ("prefabs/minimumText", typeof(Text))as Text;
 			maximumText [i] = Resources.Load ("prefabs/maximumText", typeof(Text))as Text;
-			slider[i] = Resources.Load ("prefabs/Slider", typeof(Slider))as Slider;
 			Instantiate (question [i], canvas.transform);
 			Instantiate (text [i], canvas.transform);
 			Instantiate (minimumText [i], canvas.transform);
 			Instantiate (maximumText [i], canvas.transform);
-			Instantiate (slider [i], canvas.transform);
+            slider[i] = Instantiate(Resources.Load("prefabs/Slider", typeof(Slider)) as Slider, canvas.transform, false);//sliderはinstantiateで生成された個別のvalueが欲しいから生成したオブジェクトを配列に代入している
 			question [i].rectTransform.sizeDelta = new Vector2 (200, 35);
 			question [i].rectTransform.position = new Vector3 (partsPosX - 300f, partsPosY - question [i].rectTransform.sizeDelta.y/2, 0);
 			question [i].text = "Question" + (i+1);
@@ -121,8 +116,9 @@ public class ScoreSheet : MonoBehaviour {
 			text [i].rectTransform.position = new Vector3 (partsPosX, partsPosY - 10f - text [i].rectTransform.sizeDelta.y/2, 0);
 			text [i].text = _text [i];
 			partsPosY = partsPosY - 10f - text [i].rectTransform.sizeDelta.y;
-			slider [i].GetComponent<RectTransform>().position = new Vector3 (partsPosX, partsPosY - 10f - slider[i].GetComponent<RectTransform>().sizeDelta.y/2, 0);
-			partsPosY = partsPosY - 10f - slider [i].GetComponent<RectTransform> ().sizeDelta.y;
+            //↓プレハブをinstantiateしたオブジェクにpositionを指定すると親の中心座標を原点として計算されるっぽい（rectTransformでも）
+            slider [i].GetComponent<RectTransform>().localPosition = new Vector3 (partsPosX, partsPosY - 10f - slider[i].GetComponent<RectTransform>().sizeDelta.y/2 +　canvas.GetComponent<RectTransform>().sizeDelta.y/2, 0);
+            partsPosY = partsPosY - 10f - slider [i].GetComponent<RectTransform> ().sizeDelta.y;
 			minimumText [i].rectTransform.sizeDelta = new Vector2 (200, 20 * (_minimumText [i].Length / 10 + 1));
 			minimumText [i].rectTransform.position = new Vector3 (partsPosX - 300f, partsPosY - 10f - minimumText [i].rectTransform.sizeDelta.y/2, 0);
 			minimumText [i].text = _minimumText [i];
@@ -152,19 +148,42 @@ public class ScoreSheet : MonoBehaviour {
 				partsPosY = partsPosY - 10f - maximumText [i].rectTransform.sizeDelta.y - 30f;
 			}else partsPosY -= 30f;
 		}
-
-
-	}
+        Debug.Log(slider[0].transform.position.y);
+        Debug.Log(slider[1].transform.position.y);
+    }
 	
 	// Update is called once per frame
 	void Update () {
+        //Delete test
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            for(int i = 0; i<experimentParamaters.Scores.Count; i++)
+            {
+                if (resultFi[i].Exists)
+                {
+                    Debug.Log("Delete resultFi[" +  i + "]");
+                    resultFi[i].Delete();
+                }
+            }
+        }
 		//test
 		if (Input.GetKeyDown (KeyCode.Space)) {
+            Debug.Log("Writing the data...");
 			for (int i = 0; i < experimentParamaters.Scores.Count; i++) {
-				if(experimentParamaters.ExperimentNum == 1) experimentParamaters.Scores [i] [0].Add (participantName);
+				if(experimentParamaters.ExperimentNum == 1)
+                {
+                    Debug.Log("experimentNum:" + experimentParamaters.ExperimentNum);
+                    Debug.Log("add name '" + experimentParamaters.ParticipantName + "'");
+                    experimentParamaters.Scores[i][0].Add(experimentParamaters.ParticipantName);
+                    Debug.Log("result name '" + experimentParamaters.Scores[i][0][1] + "'");
+                }
 				experimentParamaters.Scores [i] [stimuli + 1].Add (slider [i].value.ToString());
 
-				if (resultFi [i].Exists) resultFi [i].Delete ();
+				if (resultFi [i].Exists)
+                {
+                    Debug.Log("Delete resultFi[" + i + "]");
+                    resultFi[i].Delete();
+                }
 				resultFi [i] = new FileInfo (resultPath [i]);
 				StreamWriter sw = resultFi [i].CreateText ();
 				string writeText = "";

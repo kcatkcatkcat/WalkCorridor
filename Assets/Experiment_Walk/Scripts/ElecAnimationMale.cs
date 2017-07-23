@@ -194,7 +194,7 @@ public class ElecAnimationMale : MonoBehaviour
 			if (kinesthetic)
 				client1.Send (sceneCommand, sceneCommand.Length);
 
-			StartCoroutine ("WalkTrue", waitTime);
+			StartCoroutine (WalkTrue(waitTime));
 
 
 		} else if (Input.GetKeyDown (KeyCode.Q) || stride == maxStride) {
@@ -227,17 +227,8 @@ public class ElecAnimationMale : MonoBehaviour
             isWalk = false;
             anim.SetBool("isWalk", isWalk);
             All_HMD_FadeOut();
-            switch (hmd_Type)
-            {
-                case HMD_Type.Oculus:
-                    recenter_Oculus.SceneChange("ScoreSheet");
-                    break;
-                case HMD_Type.Vive:
-                    recenter_Vive.SceneChange("ScoreSheet");
-                    break;
-            }
-            
-            StartCoroutine("ResetPosition");
+            StartCoroutine(SceneChange(2.0f, hmd_Type));
+            StartCoroutine(ResetPosition(2.0f));
             giveExperimentInfo();//ExperimentParamatersにパラメータを格納
 
             Initialize ();
@@ -258,9 +249,9 @@ public class ElecAnimationMale : MonoBehaviour
 
 	}
 
-	private IEnumerator ResetPosition ()
+	private IEnumerator ResetPosition (float waitTime)
 	{
-		yield return new WaitForSeconds (2f);
+		yield return new WaitForSeconds (waitTime);
 		transform.position = new Vector3 (0, 0, 0);
         All_HMD_CameraReset();
 		yield return new WaitForSeconds (2f);
@@ -268,16 +259,28 @@ public class ElecAnimationMale : MonoBehaviour
         
 	}
 
-	private IEnumerator WalkTrue (float wait)
+	private IEnumerator WalkTrue (float waitTime)
 	{
-		yield return new WaitForSeconds (wait);
-		Debug.Log ("Co");
-		Debug.Log (wait);
+		yield return new WaitForSeconds (waitTime);
 		isWalk = true;
 		anim.SetBool ("isWalk", isWalk);
 
 
 	}
+
+    private IEnumerator SceneChange(float waitTime, HMD_Type hmd_Type)
+    {
+        yield return new WaitForSeconds(waitTime);
+        switch (hmd_Type)
+        {
+            case HMD_Type.Oculus:
+                recenter_Oculus.SceneChange("ScoreSheet");
+                break;
+            case HMD_Type.Vive:
+                recenter_Vive.SceneChange("ScoreSheet");
+                break;
+        }
+    }
 
 	public void FootSoundLeft ()
 	{
