@@ -7,10 +7,12 @@ public class Recenter_Oculus : MonoBehaviour
 {
     //[SerializeField]
     public GameObject fade;
+    private Color color;
 
 	void Start ()
 	{
 		fade = GameObject.Find(gameObject.name + "/Fade");
+        color = fade.GetComponent<MeshRenderer>().material.color;
 	}
 	
 
@@ -20,15 +22,33 @@ public class Recenter_Oculus : MonoBehaviour
 		Debug.Log ("Reset");
 	}
 
-	public void FadeIn ()
+	public IEnumerator FadeIn ()
 	{
-		iTween.FadeTo (fade, 0, 2f);
-	}
+        float time = 0;
+        Debug.Log("Fade In Oculus");
+        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 1);        
+        while (time <= 1f)
+        {
+            time += Time.deltaTime;
+            fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 1 - time);
+            yield return null;
+        }
+        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 0);
+    }
 
-	public void FadeOut ()
+	public IEnumerator FadeOut ()
 	{
-		iTween.FadeTo (fade, 1f, 2f);
-	}
+        float time = 0;
+        Debug.Log("Fade Out Oculus");
+        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 0);
+        while (time <= 1f)
+        {
+            time += Time.deltaTime;
+            fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, time);
+            yield return null;
+        }
+        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 1);
+    }
 
     public void SceneChange(string scene)
     {

@@ -9,7 +9,10 @@ using UnityEngine.UI;
 
 public class ElecAnimationMale : MonoBehaviour
 {
-	private Animator anim;
+    public bool isScore = false;  //scoreをつけるかどうか
+    [SerializeField]
+    private List<int> conductedStimuliNum;//すでに実行された刺激番号
+    private Animator anim;
 	//被験者キャラクターのアニメーター
 	[SerializeField]
 	private AudioSource footSoundLeft;
@@ -34,7 +37,7 @@ public class ElecAnimationMale : MonoBehaviour
 	public float ch7;
 	public float ch8;
 
-	private float waitTime = 0.4f;//映像と下肢駆動装置がずれる場合、要調整
+	private float WAIT_TIME = 0.4f;//映像と下肢駆動装置がずれる場合、要調整
 	[SerializeField]
 	private bool vision;
 	[SerializeField]
@@ -47,18 +50,13 @@ public class ElecAnimationMale : MonoBehaviour
 	public AudioClip clip1;
 	public AudioClip clip2;
 	public AudioClip clip3;
-
+    
+    public HMD_TYPE hmd_type;
 	public Recenter_Vive recenter_Vive;
     public Recenter_Oculus recenter_Oculus;
 
-    public enum HMD_Type
-    {
-        Vive,
-        Oculus,
-        None
-    }
 
-    public HMD_Type hmd_Type;
+    
     /***********************************************/
 
     #region UDP関連パラメータ
@@ -88,17 +86,21 @@ public class ElecAnimationMale : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
-		anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
+        getExperimentInfo();  //ExperimentParamatersの取得
+        anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
 		footSoundLeft = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
 		footSoundRight = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
-
-        switch (hmd_Type)
+        switch (hmd_type)
         {
-            case HMD_Type.Oculus:
+            case HMD_TYPE.Oculus:
+                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").SetActive(true);
+                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").SetActive(false);
                 recenter_Oculus = GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").GetComponent<Recenter_Oculus>();
                 break;
 
-            case HMD_Type.Vive:
+            case HMD_TYPE.Vive:
+                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").SetActive(false);
+                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").SetActive(true);
                 recenter_Vive = GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").GetComponent<Recenter_Vive>();
                 break;
         }
@@ -126,112 +128,17 @@ public class ElecAnimationMale : MonoBehaviour
 
         All_HMD_CameraReset();
         audioSourse = GetComponent<AudioSource> ();
-
-        if (vision)
-            All_HMD_FadeIn();
+        StartCoroutine(StartStimulation(2.0f));
 	}
 
-	void OnApplicationQuit ()
-	{
-		Initialize ();
-		client1.Close ();
-		client2.Close ();
-	}
-
-	private void Initialize ()
-	{
-		ch1 = 0;
-		ch2 = 0;
-		ch3 = 0;
-		ch4 = 0;
-		ch5 = 0;
-		ch6 = 0;
-		ch7 = 0;
-		ch8 = 0;
-		UDPsend ();
-	}
-
-	public void UDPsend ()
-	{
-		sendParameter [0] = ch1;
-		sendParameter [1] = ch2;
-		sendParameter [2] = ch3;
-		sendParameter [3] = ch4;
-		sendParameter [4] = ch5;
-		sendParameter [5] = ch6;
-		sendParameter [6] = ch7;
-		sendParameter [7] = ch8;
-
-		sendMessage = "PCServer" + ",";//送信メッセージの先頭は"PCServer"
-
-		for (int i = 0; i < 7; i++) {
-			sendMessage += sendParameter [i].ToString () + ",";
-		}
-		sendMessage += sendParameter [7].ToString () + "\0";
-		//Debug.Log (sendMessage);
-		byte[] dgram = Encoding.UTF8.GetBytes (sendMessage);
-		if (electrical)
-			client2.Send (dgram, dgram.Length);
-
-	}
+	
 
 	// Update is called once per frame
 	void Update ()
 	{
-		if (Input.GetKeyDown (KeyCode.S)) {
-			stimuli =  randomStimuliGenerator (stimuliNum);
-			audioSourse.clip = clip1;
-			audioSourse.Play ();
-			byte[] sceneCommand = new byte[6];
-			sceneCommand [0] = 0x31;  // change scene command
-			sceneCommand [1] = 0x01;  // number of data
-			sceneCommand [2] = 0x00;  // number of data
-			sceneCommand [3] = 0x00;  // number of data
-			sceneCommand [4] = 0x00;  // number of data
-			sceneCommand [5] = 0x01;  // number of data
-			if (kinesthetic)
-				client1.Send (sceneCommand, sceneCommand.Length);
-
-			StartCoroutine (WalkTrue(waitTime));
-
-
-		} else if (Input.GetKeyDown (KeyCode.Q) || stride == maxStride) {
-            stride = 0;//重複歩の初期化
-			byte[] sceneCommand = new byte[6];
-			sceneCommand [0] = 0x31;  // change scene command
-			sceneCommand [1] = 0x01;  // number of data
-			sceneCommand [2] = 0x00;  // number of data
-			sceneCommand [3] = 0x00;  // number of data
-			sceneCommand [4] = 0x00;  // number of data
-			sceneCommand [5] = 0x00;  // number of data
-            if (kinesthetic)
-                client1.Send(sceneCommand, sceneCommand.Length);
-
-            if (lastStimulation)
-            {
-                experimentNum = 0;
-                ExperimentParamaters.ExperimentNum = experimentNum;
-                audioSourse.clip = clip3;
-                audioSourse.Play();
-            }
-            else
-            {
-                experimentNum += 1;
-                ExperimentParamaters.ExperimentNum = experimentNum;
-                audioSourse.clip = clip2;
-                audioSourse.Play();
-            }
-
-            isWalk = false;
-            anim.SetBool("isWalk", isWalk);
-            All_HMD_FadeOut();
-            StartCoroutine(SceneChange(2.0f, hmd_Type));
-            StartCoroutine(ResetPosition(2.0f));
-            giveExperimentInfo();//ExperimentParamatersにパラメータを格納
-
-            Initialize ();
-
-		}
+		if (Input.GetKeyDown (KeyCode.Q) || stride == maxStride) {
+            EndStimulation();
+        }
 
 		if (Input.GetKeyDown (KeyCode.R)) {
             All_HMD_CameraReset();
@@ -247,14 +154,83 @@ public class ElecAnimationMale : MonoBehaviour
 
 	}
 
+    void OnApplicationQuit()
+    {
+        Initialize();
+        client1.Close();
+        client2.Close();
+    }
+
+    private IEnumerator StartStimulation(float waitTime)
+    {
+        Debug.Log("StartStimulation");
+        stimuli = randomStimuliGenerator(stimuliNum);
+        yield return new WaitForSeconds(waitTime);
+        if (vision) All_HMD_FadeIn();
+        audioSourse.clip = clip1;
+        audioSourse.Play();
+        byte[] sceneCommand = new byte[6];
+        sceneCommand[0] = 0x31;  // change scene command
+        sceneCommand[1] = 0x01;  // number of data
+        sceneCommand[2] = 0x00;  // number of data
+        sceneCommand[3] = 0x00;  // number of data
+        sceneCommand[4] = 0x00;  // number of data
+        sceneCommand[5] = 0x01;  // number of data
+        if (kinesthetic)
+            client1.Send(sceneCommand, sceneCommand.Length);
+
+        StartCoroutine(WalkTrue(WAIT_TIME));
+    }
+
+    private void EndStimulation()
+    {
+        stride = 0;//重複歩の初期化
+        byte[] sceneCommand = new byte[6];
+        sceneCommand[0] = 0x31;  // change scene command
+        sceneCommand[1] = 0x01;  // number of data
+        sceneCommand[2] = 0x00;  // number of data
+        sceneCommand[3] = 0x00;  // number of data
+        sceneCommand[4] = 0x00;  // number of data
+        sceneCommand[5] = 0x00;  // number of data
+        if (kinesthetic)
+            client1.Send(sceneCommand, sceneCommand.Length);
+
+        if (lastStimulation)
+        {
+            audioSourse.clip = clip3;
+            audioSourse.Play();
+            experimentNum = 0;
+        }
+        else
+        {
+            
+            audioSourse.clip = clip2;
+            audioSourse.Play();
+            experimentNum += 1;
+        }
+
+        
+        isWalk = false;
+        anim.SetBool("isWalk", isWalk);
+        if(vision)
+        {
+            Debug.Log("FadeOut");
+            All_HMD_FadeOut();
+        }
+        Initialize();
+        if (isScore) StartCoroutine(SceneChange(3.0f, hmd_type));
+        else
+        {
+            StartCoroutine(ResetPosition(3.0f));
+            StartCoroutine(StartStimulation(3.5f));
+        }
+    }
+
 	private IEnumerator ResetPosition (float waitTime)
 	{
 		yield return new WaitForSeconds (waitTime);
 		transform.position = new Vector3 (0, 0, 0);
         All_HMD_CameraReset();
-		yield return new WaitForSeconds (2f);
-        if (vision) All_HMD_FadeIn();
-        
 	}
 
 	private IEnumerator WalkTrue (float waitTime)
@@ -266,21 +242,61 @@ public class ElecAnimationMale : MonoBehaviour
 
 	}
 
-    private IEnumerator SceneChange(float waitTime, HMD_Type hmd_Type)
+    private IEnumerator SceneChange(float waitTime, HMD_TYPE hmd_Type)
     {
+        giveExperimentInfo();
         yield return new WaitForSeconds(waitTime);
         switch (hmd_Type)
         {
-            case HMD_Type.Oculus:
+            case HMD_TYPE.Oculus:
                 recenter_Oculus.SceneChange("ScoreSheet");
                 break;
-            case HMD_Type.Vive:
+            case HMD_TYPE.Vive:
                 recenter_Vive.SceneChange("ScoreSheet");
                 break;
         }
     }
 
-	public void FootSoundLeft ()
+    
+
+    private void Initialize()
+    {
+        ch1 = 0;
+        ch2 = 0;
+        ch3 = 0;
+        ch4 = 0;
+        ch5 = 0;
+        ch6 = 0;
+        ch7 = 0;
+        ch8 = 0;
+        UDPsend();
+    }
+
+    public void UDPsend()
+    {
+        sendParameter[0] = ch1;
+        sendParameter[1] = ch2;
+        sendParameter[2] = ch3;
+        sendParameter[3] = ch4;
+        sendParameter[4] = ch5;
+        sendParameter[5] = ch6;
+        sendParameter[6] = ch7;
+        sendParameter[7] = ch8;
+
+        sendMessage = "PCServer" + ",";//送信メッセージの先頭は"PCServer"
+
+        for (int i = 0; i < 7; i++)
+        {
+            sendMessage += sendParameter[i].ToString() + ",";
+        }
+        sendMessage += sendParameter[7].ToString() + "\0";
+        byte[] dgram = Encoding.UTF8.GetBytes(sendMessage);
+        if (electrical)
+            client2.Send(dgram, dgram.Length);
+
+    }
+
+    public void FootSoundLeft ()
 	{
 		footSoundLeft.Play ();
 	}
@@ -292,51 +308,51 @@ public class ElecAnimationMale : MonoBehaviour
 
     private void All_HMD_CameraReset()
     {
-        switch (hmd_Type)
+        switch (hmd_type)
         {
-            case HMD_Type.Vive:
+            case HMD_TYPE.Vive:
                 recenter_Vive.ResetCamera();
                 break;
 
-            case HMD_Type.Oculus:
+            case HMD_TYPE.Oculus:
                 recenter_Oculus.ResetCamera();
                 break;
 
-            case HMD_Type.None:
+            case HMD_TYPE.None:
                 break;
         }
     }
 
     private void All_HMD_FadeIn()
     {
-        switch (hmd_Type)
+        switch (hmd_type)
         {
-            case HMD_Type.Vive:
+            case HMD_TYPE.Vive:
                 recenter_Vive.FadeIn();
                 break;
 
-            case HMD_Type.Oculus:
-                recenter_Oculus.FadeIn();
+            case HMD_TYPE.Oculus:
+                StartCoroutine(recenter_Oculus.FadeIn());
                 break;
 
-            case HMD_Type.None:
+            case HMD_TYPE.None:
                 break;
         }
     }
 
     private void All_HMD_FadeOut()
     {
-        switch (hmd_Type)
+        switch (hmd_type)
         {
-            case HMD_Type.Vive:
+            case HMD_TYPE.Vive:
                 recenter_Vive.FadeOut();
                 break;
 
-            case HMD_Type.Oculus:
-                recenter_Oculus.FadeOut();
+            case HMD_TYPE.Oculus:
+                StartCoroutine(recenter_Oculus.FadeOut());
                 break;
 
-            case HMD_Type.None:
+            case HMD_TYPE.None:
                 break;
         }
     }
@@ -351,7 +367,17 @@ public class ElecAnimationMale : MonoBehaviour
 		ExperimentParamaters.ParticipantName = participantName;
 		ExperimentParamaters.ExperimentNum = experimentNum;
         ExperimentParamaters.Stimuli = stimuli;
-	}
+        ExperimentParamaters.StimuliNum = stimuliNum;
+        ExperimentParamaters.ConductedStimuliNum = conductedStimuliNum;
+        ExperimentParamaters.HMD_Type = hmd_type;
+        ExperimentParamaters.IsScore = isScore;
+    }
+
+    private void getExperimentInfo()
+    {
+        conductedStimuliNum = ExperimentParamaters.ConductedStimuliNum;
+        isScore = ExperimentParamaters.IsScore;
+    }
 
 	private void stimuliCombination(int num){//刺激番号とそれぞれの刺激の対応
 		switch (num) {
@@ -401,12 +427,18 @@ public class ElecAnimationMale : MonoBehaviour
 
 	public int randomStimuliGenerator(int num){//提示刺激のランダム生成機
 		int x = new int();
-		x = Random.Range (0, num - 1);
-		while (ExperimentParamaters.conductedStimuliNum.Contains (x) || x == 7) {
-			x = Random.Range (0, num - 1);
+		x = Random.Range (0, num);
+		while (conductedStimuliNum.Contains (x)) {
+			x = Random.Range (0, num);
 		}
-		ExperimentParamaters.conductedStimuliNum.Add (x);
-		stimuliCombination (x);
+		conductedStimuliNum.Add (x);
+        stimuliCombination(x);
+        if (conductedStimuliNum.Count == num)
+        {
+            lastStimulation = true;
+            conductedStimuliNum.Clear();
+        }
+        else lastStimulation = false;
 		return x;
 	}
 }

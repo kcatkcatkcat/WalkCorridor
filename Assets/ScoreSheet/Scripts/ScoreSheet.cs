@@ -6,31 +6,55 @@ using System.IO;
 using System.Text;
 
 public class ScoreSheet : MonoBehaviour {
-	[SerializeField]
-	private int questionNum;//質問数
-	[SerializeField]
-	public int stimuliNum = 5;//提示刺激数
-	public int stimuli;//現在の刺激番号
-	private string[] _text;
-	private string[] _minimumText;
-	private string[] _maximumText;
-	private string templatePath;//テンプレートのパス
-	private string[] resultPath;//結果CSVのパス
-	private FileInfo templateFi;
-	private FileInfo[] resultFi;
-	//public TextAsset scoreSheetTemplate;
-	public Canvas canvas;
-	private Text[] question;
-	private Text[] text;
-	private Text[] minimumText;
-	private Text[] maximumText;
     [SerializeField]
-	private Slider[] slider;
-	// Use this for initializatio
-	void Start () {
-		templatePath = Application.dataPath + "/CSV/ScoreSheetTemplate.csv";//テンプレートのパス
-		templateFi = new FileInfo (templatePath);//テンプレートのFileInfo
-		questionNum = csvLineNumber(templateFi) - 1;
+    private int questionNum;  //質問数
+    private int experimentNum;  //実験番号
+    private string participantName;  //実験参加者名
+    [SerializeField]
+    public int stimuliNum;  //提示刺激数
+    public int stimuli;  //現在の刺激番号
+    private string[] _text;
+    private string[] _minimumText;
+    private string[] _maximumText;
+    private string templatePath;  //テンプレートのパス
+    private string[] resultPath;  //結果CSVのパス
+    private FileInfo templateFi;
+    private FileInfo[] resultFi;
+    //public TextAsset scoreSheetTemplate;
+    public Canvas canvas;
+    private Text[] question;
+    private Text[] text;
+    private Text[] minimumText;
+    private Text[] maximumText;
+    [SerializeField]
+    private Slider[] slider;
+    private List<List<List<string>>> Scores;
+    [SerializeField]
+    private HMD_TYPE hmd_type;
+    public Recenter_Vive recenter_Vive;
+    public Recenter_Oculus recenter_Oculus;
+    // Use this for initializatio
+    void Start () {
+        getExperimentInfo();
+        switch (hmd_type)
+        {
+            case HMD_TYPE.Oculus:
+                GameObject.Find("Camera").SetActive(true);
+                GameObject.Find("[CameraRig]").SetActive(false);
+                recenter_Oculus = GameObject.Find("Camera").GetComponent<Recenter_Oculus>();
+                break;
+
+            case HMD_TYPE.Vive:
+                GameObject.Find("Camera").SetActive(false);
+                GameObject.Find("[CameraRig]").SetActive(true);
+                recenter_Vive = GameObject.Find("[CameraRig]").GetComponent<Recenter_Vive>();
+                break;
+        }
+        All_HMD_FadeIn();
+
+        templatePath = Application.dataPath + "/CSV/ScoreSheetTemplate.csv";  //テンプレートのパス
+		templateFi = new FileInfo (templatePath);  //テンプレートのFileInfo
+        questionNum = csvLineNumber(templateFi) - 1;
         Debug.Log("questionNum:" + questionNum);
 		resultPath = new string[questionNum];
 		resultFi = new FileInfo[questionNum];
@@ -60,6 +84,7 @@ public class ScoreSheet : MonoBehaviour {
 			} else {//同名のファイルが見つかれば読み取り、Listに格納
                 Debug.Log("resultFi[" + i + "]");
 				string[,] temp =  csvRead(resultFi[i]);
+                if (temp.GetLength(0) != stimuliNum) throw new FileNotFoundException();
 				for (int j = 0; j < temp.GetLength (0); j++) {
 					for (int k = 0; k < temp.GetLength (1); k++) {
                         if(temp[j, k] == null)
@@ -79,13 +104,12 @@ public class ScoreSheet : MonoBehaviour {
                 listTemp2 = new List<List<string>>();
 			}
 		}
-		ExperimentParamaters.Scores = listTemp3;
+		Scores = listTemp3;
 		listTemp3 = new List<List<List<string>>>();
-		stimuli = ExperimentParamaters.Stimuli;
 
 
-		//ExperimentNumが0のときExitExperimentボタンを表示、0以外のときNextExperimentボタンを表示
-		if (ExperimentParamaters.ExperimentNum == 0) {
+		//experimentNumが0のときExitExperimentボタンを表示、0以外のときNextExperimentボタンを表示
+		if (experimentNum == 0) {
 			GameObject.Find ("NextExperiment").SetActive (false);
 			GameObject.Find ("ExitExperiment").SetActive (true);
 		} else {
@@ -121,7 +145,7 @@ public class ScoreSheet : MonoBehaviour {
 			Instantiate (text [i], canvas.transform);
 			Instantiate (minimumText [i], canvas.transform);
 			Instantiate (maximumText [i], canvas.transform);
-            slider[i] = Instantiate(Resources.Load("prefabs/Slider", typeof(Slider)) as Slider, canvas.transform, false);//sliderはinstantiateで生成された個別のvalueが欲しいから生成したオブジェクトを配列に代入している
+            slider[i] = Instantiate(Resources.Load("prefabs/Slider", typeof(Slider)) as Slider, canvas.transform, false);  //sliderはinstantiateで生成された個別のvalueが欲しいから生成したオブジェクトを配列に代入している
 			question [i].rectTransform.sizeDelta = new Vector2 (200, 35);
 			question [i].rectTransform.position = new Vector3 (partsPosX - 300f, partsPosY - question [i].rectTransform.sizeDelta.y/2, 0);
 			question [i].text = "Question" + (i+1);
@@ -166,69 +190,126 @@ public class ScoreSheet : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        //Delete test
-        if (Input.GetKeyDown(KeyCode.D))
+	}
+
+    public void getExperimentInfo()
+    {
+        stimuliNum = ExperimentParamaters.StimuliNum;
+        stimuli = ExperimentParamaters.Stimuli;
+        Scores = ExperimentParamaters.Scores;
+        experimentNum = ExperimentParamaters.ExperimentNum;
+        participantName = ExperimentParamaters.ParticipantName;
+        hmd_type = ExperimentParamaters.HMD_Type;
+    }
+
+    public void giveExperimentInfo()
+    {
+        ExperimentParamaters.Scores = Scores;
+        ExperimentParamaters.HMD_Type = hmd_type;
+    }
+
+    private void WriteData()
+    {
+        Debug.Log("Writing the data...");
+        for (int i = 0; i < Scores.Count; i++)
         {
-            for(int i = 0; i<ExperimentParamaters.Scores.Count; i++)
+            if (experimentNum == 1)
             {
-                if (resultFi[i].Exists)
-                {
-                    Debug.Log("Delete resultFi[" +  i + "]");
-                    resultFi[i].Delete();
-                }
+                Scores[i][0].Add("\"" + participantName + "\"");
             }
-        }
-		//test
-		if (Input.GetKeyDown (KeyCode.Space)) {
-            Debug.Log("Writing the data...");
-			for (int i = 0; i < ExperimentParamaters.Scores.Count; i++) {
-				if(ExperimentParamaters.ExperimentNum == 1)
-                {
-                    ExperimentParamaters.Scores[i][0].Add("\"" + ExperimentParamaters.ParticipantName + "\"");
-                }
-				ExperimentParamaters.Scores [i] [stimuli + 1].Add ("\"" + slider[i].value.ToString() + "\"");
+            Scores[i][stimuli + 1].Add("\"" + slider[i].value.ToString() + "\"");
 
-				if (resultFi [i].Exists)
+            if (resultFi[i].Exists)
+            {
+                Debug.Log("Delete resultFi[" + i + "]");
+                resultFi[i].Delete();
+            }
+            resultFi[i] = new FileInfo(resultPath[i]);
+            StreamWriter sw = resultFi[i].CreateText();
+            string writeText = "";
+            for (int j = 0; j < Scores[i].Count; j++)
+            {
+                for (int k = 0; k < Scores[i][j].Count; k++)
                 {
-                    Debug.Log("Delete resultFi[" + i + "]");
-                    resultFi[i].Delete();
-                }
-				resultFi [i] = new FileInfo (resultPath [i]);
-				StreamWriter sw = resultFi [i].CreateText ();
-				string writeText = "";
-				for (int j = 0; j < ExperimentParamaters.Scores [i].Count; j++) {
-					for (int k = 0; k < ExperimentParamaters.Scores [i] [j].Count; k++) {
-                        if(k < ExperimentParamaters.Scores[i][j].Count - 1)
-                        {
-                            writeText += ExperimentParamaters.Scores[i][j][k] + ",";
+                    if (k < Scores[i][j].Count - 1)
+                    {
+                        writeText += Scores[i][j][k] + ",";
 
-                        }
-						else
-                        {
-                            writeText += ExperimentParamaters.Scores[i][j][k];
-                        }
                     }
-					sw.Write (writeText + "\n");
-                    writeText = "";
+                    else
+                    {
+                        writeText += Scores[i][j][k];
+                    }
                 }
-				sw.Flush ();
-				sw.Close ();
-			}
-		}
-	}
-
+                sw.Write(writeText + "\n");
+                writeText = "";
+            }
+            sw.Flush();
+            sw.Close();
+        }
+    }
 	public void OnNextExperiment () {
-		//stimuli = ExperimentParamaters.Stimuli;
-
-
-	}
+        WriteData();
+        All_HMD_FadeOut();
+        StartCoroutine(SceneChange(3.0f, hmd_type, "ElecExperiment"));
+    }
 
 	public void OnExitExperiment () {
-		
+        WriteData();
+        All_HMD_FadeOut();
+        StartCoroutine(SceneChange(3.0f, hmd_type, "End"));
 	}
 
+    private void All_HMD_FadeIn()
+    {
+        switch (hmd_type)
+        {
+            case HMD_TYPE.Vive:
+                recenter_Vive.FadeIn();
+                break;
 
-	private string[,] csvRead(FileInfo fi){
+            case HMD_TYPE.Oculus:
+                StartCoroutine(recenter_Oculus.FadeIn());
+                break;
+
+            case HMD_TYPE.None:
+                break;
+        }
+    }
+
+    private void All_HMD_FadeOut()
+    {
+        switch (hmd_type)
+        {
+            case HMD_TYPE.Vive:
+                recenter_Vive.FadeOut();
+                break;
+
+            case HMD_TYPE.Oculus:
+                StartCoroutine(recenter_Oculus.FadeOut());
+                break;
+
+            case HMD_TYPE.None:
+                break;
+        }
+    }
+    private IEnumerator SceneChange(float waitTime, HMD_TYPE hmd_Type,string scene)
+    {
+        giveExperimentInfo();
+        yield return new WaitForSeconds(waitTime);
+        switch (hmd_Type)
+        {
+            case HMD_TYPE.Oculus:
+                recenter_Oculus.SceneChange(scene);
+                break;
+            case HMD_TYPE.Vive:
+                recenter_Vive.SceneChange(scene);
+                break;
+        }
+    }
+
+
+    private string[,] csvRead(FileInfo fi){
 		if (!fi.Exists) {
 			throw new FileNotFoundException ();
 		} else {
