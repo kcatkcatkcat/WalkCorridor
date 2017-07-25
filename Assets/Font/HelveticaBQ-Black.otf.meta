@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 2b53b007ad0cf4b4c87b95b0fe9fb632
+timeCreated: 1500911714
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Helvetica BQ
+  fontNames:
+  - Helvetica BQ
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

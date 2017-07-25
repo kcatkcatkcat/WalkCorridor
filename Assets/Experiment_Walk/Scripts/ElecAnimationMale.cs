@@ -9,7 +9,6 @@ using UnityEngine.UI;
 
 public class ElecAnimationMale : MonoBehaviour
 {
-	private ExperimentParamaters experimentParamaters;
 	private Animator anim;
 	//被験者キャラクターのアニメーター
 	[SerializeField]
@@ -89,7 +88,6 @@ public class ElecAnimationMale : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
-		experimentParamaters = GameObject.Find ("ExperimentManager").GetComponent<ExperimentParamaters> ();
 		anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
 		footSoundLeft = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
 		footSoundRight = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
@@ -181,7 +179,7 @@ public class ElecAnimationMale : MonoBehaviour
 	void Update ()
 	{
 		if (Input.GetKeyDown (KeyCode.S)) {
-			stimuli =  randomStimuliGenerator ();
+			stimuli =  randomStimuliGenerator (stimuliNum);
 			audioSourse.clip = clip1;
 			audioSourse.Play ();
 			byte[] sceneCommand = new byte[6];
@@ -212,14 +210,14 @@ public class ElecAnimationMale : MonoBehaviour
             if (lastStimulation)
             {
                 experimentNum = 0;
-                experimentParamaters.ExperimentNum = experimentNum;
+                ExperimentParamaters.ExperimentNum = experimentNum;
                 audioSourse.clip = clip3;
                 audioSourse.Play();
             }
             else
             {
                 experimentNum += 1;
-                experimentParamaters.ExperimentNum = experimentNum;
+                ExperimentParamaters.ExperimentNum = experimentNum;
                 audioSourse.clip = clip2;
                 audioSourse.Play();
             }
@@ -350,8 +348,9 @@ public class ElecAnimationMale : MonoBehaviour
 	}
 
 	private void giveExperimentInfo(){//ExperimentParamatersにパラメータを格納
-		experimentParamaters.ParticipantName = participantName;
-		experimentParamaters.ExperimentNum = experimentNum;
+		ExperimentParamaters.ParticipantName = participantName;
+		ExperimentParamaters.ExperimentNum = experimentNum;
+        ExperimentParamaters.Stimuli = stimuli;
 	}
 
 	private void stimuliCombination(int num){//刺激番号とそれぞれの刺激の対応
@@ -400,13 +399,13 @@ public class ElecAnimationMale : MonoBehaviour
 		}
 	}
 
-	private int randomStimuliGenerator(){//提示刺激のランダム生成機
+	public int randomStimuliGenerator(int num){//提示刺激のランダム生成機
 		int x = new int();
-		x = Random.Range (0, 7);
-		while (experimentParamaters.conductedStimuliNum.Contains (x) || x == 7) {
-			x = Random.Range (0, 7);
+		x = Random.Range (0, num - 1);
+		while (ExperimentParamaters.conductedStimuliNum.Contains (x) || x == 7) {
+			x = Random.Range (0, num - 1);
 		}
-		experimentParamaters.conductedStimuliNum.Add (x);
+		ExperimentParamaters.conductedStimuliNum.Add (x);
 		stimuliCombination (x);
 		return x;
 	}

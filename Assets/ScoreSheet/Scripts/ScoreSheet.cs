@@ -7,8 +7,6 @@ using System.Text;
 
 public class ScoreSheet : MonoBehaviour {
 	[SerializeField]
-	private ExperimentParamaters experimentParamaters;
-	[SerializeField]
 	private int questionNum;//質問数
 	[SerializeField]
 	public int stimuliNum = 5;//提示刺激数
@@ -30,10 +28,10 @@ public class ScoreSheet : MonoBehaviour {
 	private Slider[] slider;
 	// Use this for initializatio
 	void Start () {
-		experimentParamaters = GameObject.Find ("ExperimentManager").GetComponent<ExperimentParamaters> ();
 		templatePath = Application.dataPath + "/CSV/ScoreSheetTemplate.csv";//テンプレートのパス
 		templateFi = new FileInfo (templatePath);//テンプレートのFileInfo
 		questionNum = csvLineNumber(templateFi) - 1;
+        Debug.Log("questionNum:" + questionNum);
 		resultPath = new string[questionNum];
 		resultFi = new FileInfo[questionNum];
 		List<string> listTemp1 = new List<string>();;
@@ -42,35 +40,52 @@ public class ScoreSheet : MonoBehaviour {
 		for (int i = 0; i < questionNum; i++) {
 			resultPath[i] =  Application.dataPath + "/CSV/resultQuestion" + (i+1) + ".csv";
 			resultFi [i] = new FileInfo (resultPath [i]);
-			if (!resultFi [i].Exists) {//s同名のファイルがなければ何もしない
+			if (!resultFi [i].Exists) {//同名のファイルがなければ何もしない
+                Debug.Log("!resultFi[" + i + "]");
 				StreamWriter sw = resultFi [i].CreateText ();
-				sw.WriteLine ("Question" + (i+1));
-				for(int j = 0; j < stimuliNum; j++){
-					sw.WriteLine("stimulation" + (j+1));
-				}
-				sw.Flush ();
+				sw.WriteLine ("\"Question" + (i + 1) + "\"");
+                listTemp1.Add("\"Question" + (i + 1) + "\"");
+                listTemp2.Add(listTemp1);
+                listTemp1 = new List<string>();
+                for (int j = 0; j < stimuliNum; j++){
+					sw.WriteLine("\"stimulation" + (j+1) + "\"");
+                    listTemp1.Add("\"stimulation" + (j + 1) + "\"");
+                    listTemp2.Add(listTemp1);
+                    listTemp1 = new List<string>();
+                }
+                listTemp3.Add(listTemp2);
+                listTemp2 = new List<List<string>>();
+                sw.Flush ();
 				sw.Close ();
 			} else {//同名のファイルが見つかれば読み取り、Listに格納
+                Debug.Log("resultFi[" + i + "]");
 				string[,] temp =  csvRead(resultFi[i]);
 				for (int j = 0; j < temp.GetLength (0); j++) {
 					for (int k = 0; k < temp.GetLength (1); k++) {
-
-						listTemp1.Add (temp [j, k]);
-					}
-					listTemp2.Add (listTemp1);
-					listTemp1 = new List<string>();
+                        if(temp[j, k] == null)
+                        {
+                            listTemp1.Add("\"\"");
+                        }
+                        else
+                        {
+                            listTemp1.Add(temp[j, k]);//listTemp1:行リスト
+                        }
+						
+                    }
+					listTemp2.Add (listTemp1);//listTemp2:シートの列リスト
+                    listTemp1 = new List<string>();
 				}
-				listTemp3.Add (listTemp2);
-				listTemp2 = new List<List<string>>();
+				listTemp3.Add (listTemp2);//listTemp3:質問ごとのシート
+                listTemp2 = new List<List<string>>();
 			}
 		}
-		experimentParamaters.Scores = listTemp3;
+		ExperimentParamaters.Scores = listTemp3;
 		listTemp3 = new List<List<List<string>>>();
-		stimuli = experimentParamaters.Stimuli;
+		stimuli = ExperimentParamaters.Stimuli;
 
 
 		//ExperimentNumが0のときExitExperimentボタンを表示、0以外のときNextExperimentボタンを表示
-		if (experimentParamaters.ExperimentNum == 0) {
+		if (ExperimentParamaters.ExperimentNum == 0) {
 			GameObject.Find ("NextExperiment").SetActive (false);
 			GameObject.Find ("ExitExperiment").SetActive (true);
 		} else {
@@ -97,7 +112,6 @@ public class ScoreSheet : MonoBehaviour {
 		canvas = GameObject.Find ("ScoreSheet").GetComponent<Canvas>();
 		float partsPosX = 0;
 		float partsPosY = 0;
-        Slider s;
 		for (int i = 0; i < questionNum; i++) {
 			question [i] = Resources.Load ("prefabs/Question", typeof(Text)) as Text;
 			text [i] = Resources.Load ("prefabs/Text", typeof(Text))as Text;
@@ -148,8 +162,6 @@ public class ScoreSheet : MonoBehaviour {
 				partsPosY = partsPosY - 10f - maximumText [i].rectTransform.sizeDelta.y - 30f;
 			}else partsPosY -= 30f;
 		}
-        Debug.Log(slider[0].transform.position.y);
-        Debug.Log(slider[1].transform.position.y);
     }
 	
 	// Update is called once per frame
@@ -157,7 +169,7 @@ public class ScoreSheet : MonoBehaviour {
         //Delete test
         if (Input.GetKeyDown(KeyCode.D))
         {
-            for(int i = 0; i<experimentParamaters.Scores.Count; i++)
+            for(int i = 0; i<ExperimentParamaters.Scores.Count; i++)
             {
                 if (resultFi[i].Exists)
                 {
@@ -169,15 +181,12 @@ public class ScoreSheet : MonoBehaviour {
 		//test
 		if (Input.GetKeyDown (KeyCode.Space)) {
             Debug.Log("Writing the data...");
-			for (int i = 0; i < experimentParamaters.Scores.Count; i++) {
-				if(experimentParamaters.ExperimentNum == 1)
+			for (int i = 0; i < ExperimentParamaters.Scores.Count; i++) {
+				if(ExperimentParamaters.ExperimentNum == 1)
                 {
-                    Debug.Log("experimentNum:" + experimentParamaters.ExperimentNum);
-                    Debug.Log("add name '" + experimentParamaters.ParticipantName + "'");
-                    experimentParamaters.Scores[i][0].Add(experimentParamaters.ParticipantName);
-                    Debug.Log("result name '" + experimentParamaters.Scores[i][0][1] + "'");
+                    ExperimentParamaters.Scores[i][0].Add("\"" + ExperimentParamaters.ParticipantName + "\"");
                 }
-				experimentParamaters.Scores [i] [stimuli + 1].Add (slider [i].value.ToString());
+				ExperimentParamaters.Scores [i] [stimuli + 1].Add ("\"" + slider[i].value.ToString() + "\"");
 
 				if (resultFi [i].Exists)
                 {
@@ -187,15 +196,19 @@ public class ScoreSheet : MonoBehaviour {
 				resultFi [i] = new FileInfo (resultPath [i]);
 				StreamWriter sw = resultFi [i].CreateText ();
 				string writeText = "";
-				for (int j = 0; j < experimentParamaters.Scores [i].Count; j++) {
-					for (int k = 0; k < experimentParamaters.Scores [i] [j].Count; k++) {
-						if (k < experimentParamaters.Scores [i] [j].Count - 1) {
-							writeText += experimentParamaters.Scores [i] [j] [k] + ",";
-						} else {
-							writeText += experimentParamaters.Scores [i] [j] [k];
-						}
-					}
-					sw.WriteLine (writeText);
+				for (int j = 0; j < ExperimentParamaters.Scores [i].Count; j++) {
+					for (int k = 0; k < ExperimentParamaters.Scores [i] [j].Count; k++) {
+                        if(k < ExperimentParamaters.Scores[i][j].Count - 1)
+                        {
+                            writeText += ExperimentParamaters.Scores[i][j][k] + ",";
+
+                        }
+						else
+                        {
+                            writeText += ExperimentParamaters.Scores[i][j][k];
+                        }
+                    }
+					sw.Write (writeText + "\n");
                     writeText = "";
                 }
 				sw.Flush ();
@@ -223,15 +236,15 @@ public class ScoreSheet : MonoBehaviour {
 			string text = sr.ReadToEnd ();
 			sr.Close ();
 			string[] lineText = text.Split ('\n');
-			lineText = text.Split ('\n');
-			int columNum = lineText[0].Split(',').Length;
-			int lineNum = lineText.Length - 1;
-			string[,] csv = new string[lineNum,columNum];
+            int columNum = lineText[0].Split(',').Length;//列数の最大数
+            int lineNum = lineText.Length - 1;//行数
+            string[,] csv = new string[lineNum,columNum];
 			for (int i = 0; i < lineNum; i++) {
-				for (int j = 0; j < columNum; j++) {
+                columNum = lineText[i].Split(',').Length;
+                for (int j = 0; j < columNum; j++) {
 					string[] words = lineText [i].Split (',');
-					csv [i,j] = words[j];
-				}
+                    csv[i, j] = words[j];
+                }
 			}
 			return csv;
 		}
@@ -258,7 +271,7 @@ public class ScoreSheet : MonoBehaviour {
 			string[] lineText = text.Split ('\n');
 			lineText = text.Split ('\n');
 			sr.Close ();
-			return lineText [0].Split (',').Length;
+			return lineText [0].Split (',').Length - 1;
 		}
 	}
 
