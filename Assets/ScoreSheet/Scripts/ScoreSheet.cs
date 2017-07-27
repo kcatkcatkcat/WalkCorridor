@@ -6,13 +6,20 @@ using System.IO;
 using System.Text;
 
 public class ScoreSheet : MonoBehaviour {
+
+    [SerializeField]
+    private List<int> conductedStimuliNum;//すでに実行された刺激番号
+
     [SerializeField]
     private int questionNum;  //質問数
+    [SerializeField]
     private int experimentNum;  //実験番号
+    [SerializeField]
     private string participantName;  //実験参加者名
     [SerializeField]
-    public int stimuliNum;  //提示刺激数
-    public int stimuli;  //現在の刺激番号
+    private int stimuliNum;  //提示刺激数
+    [SerializeField]
+    private int stimuli;  //現在の刺激番号
     private string[] _text;
     private string[] _minimumText;
     private string[] _maximumText;
@@ -84,18 +91,13 @@ public class ScoreSheet : MonoBehaviour {
 			} else {//同名のファイルが見つかれば読み取り、Listに格納
                 Debug.Log("resultFi[" + i + "]");
 				string[,] temp =  csvRead(resultFi[i]);
-                if (temp.GetLength(0) != stimuliNum) throw new FileNotFoundException();
+                if (temp.GetLength(0) - 1 != stimuliNum) throw new FileNotFoundException();
 				for (int j = 0; j < temp.GetLength (0); j++) {
-					for (int k = 0; k < temp.GetLength (1); k++) {
-                        if(temp[j, k] == null)
-                        {
-                            listTemp1.Add("\"\"");
-                        }
-                        else
+					for (int k = 0; k < temp.GetLength (1); k++) {                        
+                        if(temp[j, k] != null)
                         {
                             listTemp1.Add(temp[j, k]);//listTemp1:行リスト
                         }
-						
                     }
 					listTemp2.Add (listTemp1);//listTemp2:シートの列リスト
                     listTemp1 = new List<string>();
@@ -194,6 +196,10 @@ public class ScoreSheet : MonoBehaviour {
 
     public void getExperimentInfo()
     {
+        Debug.Log("get experiment paramaters");
+
+        conductedStimuliNum = ExperimentParamaters.ConductedStimuliNum;
+
         stimuliNum = ExperimentParamaters.StimuliNum;
         stimuli = ExperimentParamaters.Stimuli;
         Scores = ExperimentParamaters.Scores;
@@ -204,6 +210,7 @@ public class ScoreSheet : MonoBehaviour {
 
     public void giveExperimentInfo()
     {
+        Debug.Log("give experiment paramaters");
         ExperimentParamaters.Scores = Scores;
         ExperimentParamaters.HMD_Type = hmd_type;
     }
@@ -213,11 +220,11 @@ public class ScoreSheet : MonoBehaviour {
         Debug.Log("Writing the data...");
         for (int i = 0; i < Scores.Count; i++)
         {
-            if (experimentNum == 1)
+            if (experimentNum == 1 )
             {
-                Scores[i][0].Add("\"" + participantName + "\"");
+                Scores[i][0].Add(participantName);
             }
-            Scores[i][stimuli + 1].Add("\"" + slider[i].value.ToString() + "\"");
+            Scores[i][stimuli + 1].Add(slider[i].value.ToString());
 
             if (resultFi[i].Exists)
             {
@@ -251,13 +258,13 @@ public class ScoreSheet : MonoBehaviour {
 	public void OnNextExperiment () {
         WriteData();
         All_HMD_FadeOut();
-        StartCoroutine(SceneChange(3.0f, hmd_type, "ElecExperiment"));
+        StartCoroutine(SceneChange(2.0f, hmd_type, "ElecExperiment"));
     }
 
 	public void OnExitExperiment () {
         WriteData();
         All_HMD_FadeOut();
-        StartCoroutine(SceneChange(3.0f, hmd_type, "End"));
+        StartCoroutine(SceneChange(2.0f, hmd_type, "End"));
 	}
 
     private void All_HMD_FadeIn()
@@ -310,15 +317,20 @@ public class ScoreSheet : MonoBehaviour {
 
 
     private string[,] csvRead(FileInfo fi){
-		if (!fi.Exists) {
-			throw new FileNotFoundException ();
-		} else {
-			StreamReader sr = fi.OpenText ();
-			string text = sr.ReadToEnd ();
-			sr.Close ();
-			string[] lineText = text.Split ('\n');
-            int columNum = lineText[0].Split(',').Length;//列数の最大数
+        if (!fi.Exists) {
+            throw new FileNotFoundException();
+        } else {
+            StreamReader sr = fi.OpenText();
+            string text = sr.ReadToEnd();
+            sr.Close();
+            string[] lineText = text.Split('\n');
             int lineNum = lineText.Length - 1;//行数
+            int[] arr = new int[lineNum];
+            for (int i = 0; i < lineNum; i++)
+            {
+                arr[i] = lineText[i].Split(',').Length;
+            }
+            int columNum = Mathf.Max(arr);//列数の最大数
             string[,] csv = new string[lineNum,columNum];
 			for (int i = 0; i < lineNum; i++) {
                 columNum = lineText[i].Split(',').Length;

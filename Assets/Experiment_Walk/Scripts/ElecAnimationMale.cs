@@ -199,6 +199,7 @@ public class ElecAnimationMale : MonoBehaviour
         {
             audioSourse.clip = clip3;
             audioSourse.Play();
+
             experimentNum = 0;
         }
         else
@@ -218,11 +219,11 @@ public class ElecAnimationMale : MonoBehaviour
             All_HMD_FadeOut();
         }
         Initialize();
-        if (isScore) StartCoroutine(SceneChange(3.0f, hmd_type));
+        if (isScore) StartCoroutine(SceneChange(2.0f, hmd_type));
         else
         {
-            StartCoroutine(ResetPosition(3.0f));
-            StartCoroutine(StartStimulation(3.5f));
+            StartCoroutine(ResetPosition(2.0f));
+            StartCoroutine(StartStimulation(2.5f));
         }
     }
 
@@ -364,7 +365,8 @@ public class ElecAnimationMale : MonoBehaviour
 	}
 
 	private void giveExperimentInfo(){//ExperimentParamatersにパラメータを格納
-		ExperimentParamaters.ParticipantName = participantName;
+        Debug.Log("give experiment paramaters");
+        ExperimentParamaters.ParticipantName = participantName;
 		ExperimentParamaters.ExperimentNum = experimentNum;
         ExperimentParamaters.Stimuli = stimuli;
         ExperimentParamaters.StimuliNum = stimuliNum;
@@ -375,8 +377,11 @@ public class ElecAnimationMale : MonoBehaviour
 
     private void getExperimentInfo()
     {
+        Debug.Log("get experiment paramaters");
         conductedStimuliNum = ExperimentParamaters.ConductedStimuliNum;
         isScore = ExperimentParamaters.IsScore;
+        experimentNum = ExperimentParamaters.ExperimentNum;
+
     }
 
 	private void stimuliCombination(int num){//刺激番号とそれぞれの刺激の対応
