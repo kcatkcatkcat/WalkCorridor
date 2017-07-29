@@ -8,8 +8,12 @@ Shader "Morph3D/Standard - Double Sided"
 		_Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
 		_Glossiness("Smoothness", Range(0.0, 1.0)) = 0.5
+		_GlossMapScale("Smoothness Scale", Range(0.0, 1.0)) = 1.0
 		[Gamma] _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
 		_MetallicGlossMap("Metallic", 2D) = "white" {}
+
+		//_SpecGlossMap("Specular",2D) = "white" {}
+		//_SpecColor("Spec Color", Color) = (0,0,0)
 
 		_BumpScale("Scale", Float) = 1.0
 		_BumpMap("Normal Map", 2D) = "bump" {}

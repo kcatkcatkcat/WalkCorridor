@@ -60,9 +60,9 @@ namespace AssemblyCSharpEditor
 				sr.WriteLine ( obj.gameObject.name + " current LOD level: " + obj.currentLODLevel);
 
 				//Check blendshape levels
-				foreach (MORPH3D.FOUNDATIONS.CoreBlendshape blend in obj.GetAllBlendshapes()) {
-					if (blend.currentValue > 0) {
-						sr.WriteLine ( obj.gameObject.name + " blend shape " + blend.ID + ": " + blend.currentValue);
+				foreach (MORPH3D.FOUNDATIONS.Morph morph in obj.coreMorphs.morphStateGroups["All"]) {
+					if (morph.value > 0) {
+						sr.WriteLine ( obj.gameObject.name + " blend shape " + morph.name + ": " + morph.value);
 					}
 				}
 

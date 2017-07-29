@@ -1,6 +1,4 @@
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+//UNITY_SHADER_NO_UPGRADE
 
 Shader "Morph3D/Standard-2pass-double sided"
 {
@@ -100,12 +98,15 @@ Shader "Morph3D/Standard-2pass-double sided"
 			{
 				VertexOutputForwardBase o;
 				UNITY_INITIALIZE_OUTPUT(VertexOutputForwardBase, o);
-
+#if UNITY_VERSION >= 540
 				float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#else
+				float4 posWorld = mul(_Object2World, v.vertex);
+#endif
 				#if UNITY_SPECCUBE_BOX_PROJECTION
 					o.posWorld = posWorld.xyz;
 				#endif
-				o.pos = UnityObjectToClipPos(v.vertex);
+				o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
 				o.tex = TexCoords(v);
 				o.eyeVec = NormalizePerVertexNormal(posWorld.xyz - _WorldSpaceCameraPos);
 				float3 normalWorld = UnityObjectToWorldNormal(-v.normal);
@@ -167,15 +168,27 @@ Shader "Morph3D/Standard-2pass-double sided"
 			half4 myFrag (VertexOutputForwardBase i) : SV_Target
 			{
 				FRAGMENT_SETUP(s)
+#if UNITY_VERSION >= 550
+				UnityLight mainLight = MainLight ();
+#else 
 				UnityLight mainLight = MainLight (-s.normalWorld);
+#endif
 				half atten = SHADOW_ATTENUATION(i);
 				
 				half occlusion = Occlusion(i.tex.xy);
-				UnityGI gi = FragmentGI (
-					s.posWorld, occlusion, i.ambientOrLightmapUV, atten, s.oneMinusRoughness, s.normalWorld, s.eyeVec, mainLight);
 
-				half4 c = UNITY_BRDF_PBS (s.diffColor, s.specColor, s.oneMinusReflectivity, s.oneMinusRoughness, s.normalWorld, -s.eyeVec, gi.light, gi.indirect);
-				c.rgb += UNITY_BRDF_GI (s.diffColor, s.specColor, s.oneMinusReflectivity, s.oneMinusRoughness, s.normalWorld, -s.eyeVec, occlusion, gi);
+				half smoothness;
+#if UNITY_VERSION >= 550
+				smoothness = s.smoothness;
+#else
+				smoothness = s.oneMinusRoughness;
+#endif
+
+				UnityGI gi = FragmentGI (
+					s.posWorld, occlusion, i.ambientOrLightmapUV, atten, smoothness, s.normalWorld, s.eyeVec, mainLight);
+
+				half4 c = UNITY_BRDF_PBS (s.diffColor, s.specColor, s.oneMinusReflectivity, smoothness, s.normalWorld, -s.eyeVec, gi.light, gi.indirect);
+				c.rgb += UNITY_BRDF_GI (s.diffColor, s.specColor, s.oneMinusReflectivity, smoothness, s.normalWorld, -s.eyeVec, occlusion, gi);
 				c.rgb += Emission(i.tex.xy);
 				c.rgb *= 0.7;
 
@@ -231,11 +244,15 @@ Shader "Morph3D/Standard-2pass-double sided"
 				VertexOutputForwardBase o;
 				UNITY_INITIALIZE_OUTPUT(VertexOutputForwardBase, o);
 
+#if UNITY_VERSION >= 540
 				float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#else
+				float4 posWorld = mul(_Object2World, v.vertex);
+#endif
 				#if UNITY_SPECCUBE_BOX_PROJECTION
 					o.posWorld = posWorld.xyz;
 				#endif
-				o.pos = UnityObjectToClipPos(v.vertex);
+				o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
 				o.tex = TexCoords(v);
 				o.eyeVec = NormalizePerVertexNormal(posWorld.xyz - _WorldSpaceCameraPos);
 				float3 normalWorld = UnityObjectToWorldNormal(v.normal);
@@ -297,15 +314,25 @@ Shader "Morph3D/Standard-2pass-double sided"
 			half4 myFrag (VertexOutputForwardBase i) : SV_Target
 			{
 				FRAGMENT_SETUP(s)
-				UnityLight mainLight = MainLight (s.normalWorld);
+#if UNITY_VERSION >= 550
+				UnityLight mainLight = MainLight ();
+#else 
+				UnityLight mainLight = MainLight (-s.normalWorld);
+#endif
 				half atten = SHADOW_ATTENUATION(i);
 				
 				half occlusion = Occlusion(i.tex.xy);
+				half smoothness;
+#if UNITY_VERSION >= 550
+				smoothness = s.smoothness;
+#else
+				smoothness = s.oneMinusRoughness;
+#endif
 				UnityGI gi = FragmentGI (
-					s.posWorld, occlusion, i.ambientOrLightmapUV, atten, s.oneMinusRoughness, s.normalWorld, s.eyeVec, mainLight);
+					s.posWorld, occlusion, i.ambientOrLightmapUV, atten, smoothness, s.normalWorld, s.eyeVec, mainLight);
 
-				half4 c = UNITY_BRDF_PBS (s.diffColor, s.specColor, s.oneMinusReflectivity, s.oneMinusRoughness, s.normalWorld, -s.eyeVec, gi.light, gi.indirect);
-				c.rgb += UNITY_BRDF_GI (s.diffColor, s.specColor, s.oneMinusReflectivity, s.oneMinusRoughness, s.normalWorld, -s.eyeVec, occlusion, gi);
+				half4 c = UNITY_BRDF_PBS (s.diffColor, s.specColor, s.oneMinusReflectivity, smoothness, s.normalWorld, -s.eyeVec, gi.light, gi.indirect);
+				c.rgb += UNITY_BRDF_GI (s.diffColor, s.specColor, s.oneMinusReflectivity, smoothness, s.normalWorld, -s.eyeVec, occlusion, gi);
 				c.rgb += Emission(i.tex.xy);
 
 				UNITY_APPLY_FOG(i.fogCoord, c.rgb);

@@ -2,346 +2,270 @@ using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 using MORPH3D.COSTUMING;
+using MORPH3D.CONSTANTS;
 using MORPH3D;
+using System;
+using MORPH3D.FOUNDATIONS;
 
 namespace MORPH3D.EDITORS
 {
-	[CustomEditor (typeof(M3DCharacterManager))]
+
+    /// <summary>
+    /// Used internally to check for updates triggered by a user in the editor for a blendshape
+    /// </summary>
+    public struct EditorMorphState
+    {
+        public float value;
+        public bool attached;
+        public bool dirty;
+
+        public bool dirtyValue;
+        public bool dirtyAttached;
+    }
+
+    [CustomEditor (typeof(M3DCharacterManager))]
 	public class M3DCharacterManagerEditor : Editor
 	{
-		protected M3DCharacterManager data = null;
+		protected M3DCharacterManager charMan = null;
 
-		protected M3DBlendshapeNames names = null;
-		protected string[] namesList = null;
-		
-		protected bool showAllBlendShapes = false;
-		protected string selectedBlendShape = "";
-		protected bool showAllBlendshapesGroups = false;
-		protected bool[] showBlendshapeGroups = null;
-		protected string[] selectedBlendshapeNames = null;
-
+        protected bool showMorphs = false; //internally used for the twirl down of "Morphs" in the inspector panel
 		protected bool showContentPacks = false;
 
 		protected bool showAllClothing = false;
 		protected bool showAllClothingGroups = false;
 		protected bool[] showClothingGroups = null;
 		protected int selectedClothingName = 0;
-	
-		protected bool showAttachmentPoints = false;
+
+        protected string selectedBlendShape = "";
+        protected bool showMorphTypeGroups = false;
+
+        protected bool showAttachmentPoints = false;
 		protected bool[] showAttachmentPointsGroups = null;
 		protected string[] selectedPropsNames = null;
 
 		protected string selectedNewAttachmentPointName = "";
 
 		protected bool showHair = false;
+        protected bool showAdvanced = false;
 
-		public override void OnInspectorGUI()
+        public override void OnInspectorGUI()
 		{
 			#region just_stuff
 			serializedObject.Update ();
-			if(data == null)
-				data = (M3DCharacterManager)target;
-			if (names == null){
-//				Debug.Log("NAMES SCIRPTZABLE OBJECT NULL IN EDITOR");
-				names = (M3DBlendshapeNames)Resources.Load ("M3D_BlendshapesNames");
-			}
+			if(charMan == null)
+				charMan = (M3DCharacterManager)target;
+
+
+            if(charMan == null || !charMan.isAwake)
+            {
+                GUILayout.Label("Your figure must be in the scene to edit settings");
+                return;
+            }
+
+            GUIStyle m3dDefaultButtonStyle = new GUIStyle(GUI.skin.button);
+            m3dDefaultButtonStyle.margin = new RectOffset(10,10,5,5);
+            m3dDefaultButtonStyle.padding = new RectOffset(5, 5, 5, 5);
+
 			#endregion just_stuff
 
 			
 			#region LOD
 			float lod;
-			lod = EditorGUILayout.Slider("LOD", data.currentLODLevel, 0, 1);
-			if(lod != data.currentLODLevel)
+			lod = EditorGUILayout.Slider("LOD", charMan.currentLODLevel, 0, 1);
+			if(lod != charMan.currentLODLevel)
 			{
-				Undo.RecordObject(data, "Change LOD");
-				data.SetLODLevel(lod);
-				EditorUtility.SetDirty(data);
+				Undo.RecordObject(charMan, "Change LOD");
+				charMan.SetLODLevel(lod);
+				EditorUtility.SetDirty(charMan);
 			}
 			EditorGUILayout.Space();
-			#endregion LOD
+            #endregion LOD
 
-			#region blendshapes
-			List<MORPH3D.FOUNDATIONS.CoreBlendshape> shapes = data.GetAllBlendshapes();
-			if(shapes.Count  == 0){//this check houldnt be needed. it's now included in the bendshape model itself
-				Debug.Log("NO BLEnDSHAPES VIA EDITOR");
-				data.InitBlendshapeModel();
-				shapes = data.GetAllBlendshapes();
-			}
+            #region morphs
+            showMorphs = EditorGUILayout.Foldout(showMorphs, "Morphs");
+            if (showMorphs)
+            {
+                //SerializedObject so = new SerializedObject(charMan.coreMorphs);
+                //so.Update();
 
+                charMan.coreMorphs.SortIfNeeded();
+                EditorGUI.indentLevel++;
 
-			showAllBlendShapes = EditorGUILayout.Foldout (showAllBlendShapes, "All Blendshapes");
-			if(showAllBlendShapes)
-			{
-				EditorGUI.indentLevel++;
+                GUILayout.BeginHorizontal();
+                selectedBlendShape = GUILayout.TextField(selectedBlendShape, GUI.skin.FindStyle("ToolbarSeachTextField"));
+                if (GUILayout.Button("", GUI.skin.FindStyle("ToolbarSeachCancelButton")))
+                {
+                    selectedBlendShape = "";
+                    GUI.FocusControl(null);
+                }
+                GUILayout.EndHorizontal();
+                EditorGUILayout.Space();
 
-				GUILayout.BeginHorizontal();
-				selectedBlendShape = GUILayout.TextField(selectedBlendShape, GUI.skin.FindStyle("ToolbarSeachTextField"));
-				if (GUILayout.Button("", GUI.skin.FindStyle("ToolbarSeachCancelButton")))
-				{
-					selectedBlendShape = "";
-					GUI.FocusControl(null);
-				}
-				GUILayout.EndHorizontal();
-				EditorGUILayout.Space();
-				if (GUILayout.Button("Reset All"))
-				{
-					Undo.RecordObject(data, "Change Blendshape");
-					foreach(MORPH3D.FOUNDATIONS.CoreBlendshape shape in shapes)
-						data.SetBlendshapeValue(shape.ID, 0);
-					EditorUtility.SetDirty(data);
-				}
+                if (GUILayout.Button("Reset All", m3dDefaultButtonStyle))
+                {
+                    Undo.RecordObject(charMan, "Change Morph");
+                    for (int i = 0; i < charMan.coreMorphs.morphs.Count; i++)
+                    {
+                        if (charMan.coreMorphs.morphs[i].attached)
+                        {
+                            charMan.SetBlendshapeValue(charMan.coreMorphs.morphs[i].name, 0);
+                        }
+                    }
+                    EditorUtility.SetDirty(charMan);
+                }
+                EditorGUILayout.Space();
+                if (GUILayout.Button("Detach All", m3dDefaultButtonStyle))
+                {
+                    Undo.RecordObject(charMan, "Detach All Morphs");
+                    charMan.RemoveAllMorphs();
+                    EditorUtility.SetDirty(charMan);
+                }
+                EditorGUILayout.Space();
 
-				foreach(MORPH3D.FOUNDATIONS.CoreBlendshape shape in shapes)
-				{
-					if(selectedBlendShape != "" && names.GetLabelFromBlendshapeID(shape.ID).IndexOf(selectedBlendShape, System.StringComparison.OrdinalIgnoreCase) < 0)
-						continue;
+                List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphValues = new List<MORPH3D.FOUNDATIONS.Morph>();
+                List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphAttachments = new List<MORPH3D.FOUNDATIONS.Morph>();
+                List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphDettachments = new List<MORPH3D.FOUNDATIONS.Morph>();
 
-//					bool tempLock;
-					float temp = DisplayBlendShape(shape);
-					
-//					if(tempLock != shape.isLocked)
-//					{
-//						Undo.RecordObject(data, "Lock Blendshape");
-//						if(tempLock)
-					//							data.LockBlendshape(shape.ID);
-//						else
-					//							data.UnlockBlendshape(shape.ID);
-//						EditorUtility.SetDirty(data);
-//					}
-					if(temp != shape.currentValue)
-					{
-						Undo.RecordObject(data, "Change Blendshape");
-						data.SetBlendshapeValue(shape.ID, temp);
-						EditorUtility.SetDirty(data);
-					}
-				}
-				if (GUILayout.Button("Reset All"))
-				{
-					Undo.RecordObject(data, "Change Blendshape");
-					foreach(MORPH3D.FOUNDATIONS.CoreBlendshape shape in shapes)
-						data.SetBlendshapeValue(shape.ID, 0);
-					EditorUtility.SetDirty(data);
-				}
-				EditorGUI.indentLevel--;
-			}
+                EditorMorphs(charMan.coreMorphs.morphs, dirtyMorphValues, dirtyMorphAttachments, dirtyMorphDettachments);
 
-			showAllBlendshapesGroups = EditorGUILayout.Foldout (showAllBlendshapesGroups, "Blendshape Groups");
-			if(showAllBlendshapesGroups)
-			{
-				namesList = names.GetAllNames();
-				List<MORPH3D.FOUNDATIONS.CoreBlendshapeGroup> groups = data.GetAllBlendshapeGroups();
-				if(showBlendshapeGroups == null || showBlendshapeGroups.Length != groups.Count)
-					showBlendshapeGroups = new bool[groups.Count];
-				if(selectedBlendshapeNames == null || selectedBlendshapeNames.Length != groups.Count)
-					selectedBlendshapeNames = new string[groups.Count];
+                if (dirtyMorphDettachments.Count > 0 || dirtyMorphAttachments.Count > 0 || dirtyMorphValues.Count > 0)
+                {
 
-				EditorGUI.indentLevel++;
+				    Undo.RecordObject(charMan.coreMorphs, "Change Morph");
+                    charMan.coreMorphs.DettachMorphs(dirtyMorphDettachments.ToArray());
+                    charMan.coreMorphs.AttachMorphs(dirtyMorphAttachments.ToArray());
+                    charMan.coreMorphs.SyncMorphValues(dirtyMorphValues.ToArray());
+                    charMan.SyncAllBlendShapes();
 
-				int remove = -1;
-				for(int i = 0; i < groups.Count; i++)
-				{
-					showBlendshapeGroups[i] = EditorGUILayout.Foldout (showBlendshapeGroups[i], groups[i].groupName);
-					if(showBlendshapeGroups[i])
-					{
-						string tempName;
-						EditorGUI.indentLevel++;
-						if(!groups[i].isLocked)
-						{
-							tempName = EditorGUILayout.TextField("Name", groups[i].groupName);
-							if(groups[i].groupName != tempName)
-							{
-								groups[i].groupName = tempName;
-								EditorUtility.SetDirty(data);
-							}
-						}
+                    //so.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(charMan.coreMorphs);
+                }
 
-						if(groups[i].bsCount > 0)
-						{
-							float groupVal = EditorGUILayout.Slider("Group Weight", groups[i].groupValue, 0, 100);
-							if(groups[i].groupValue != groupVal)
-							{
-								Undo.RecordObject(data, "Change Group Value");
-								data.SetBlendshapeGroupValue(groups[i].groupName, groupVal);
-								EditorUtility.SetDirty(data);
-							}
-							EditorGUILayout.Space();
-						}
-						
-						List<MORPH3D.FOUNDATIONS.CoreBlendshape> groupShapes = groups[i].GetAllBlendshapes();
-						
-						EditorGUILayout.BeginHorizontal();
-						GUILayout.FlexibleSpace();
-						if (GUILayout.Button("Reset Group", GUILayout.Width(250)))
-						{
-							Undo.RecordObject(data, "Change Blendshape");
-							for(int x = 0; x < groupShapes.Count; x++)
-								data.SetBlendshapeValue(groupShapes[x].ID, 0);
-							groups[i].SetGroupValue(0);
-							EditorUtility.SetDirty(data);
-						}
-						GUILayout.FlexibleSpace();
-						EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space();
+                EditorGUI.indentLevel--;
 
-						int deleteFromGroup = -1;
-						for(int x = 0; x < groupShapes.Count; x++)
-						{
-//							bool tempLock;
-							bool delete = false;
-							float temp = (groups[i].isLocked) ? DisplayBlendShape(groupShapes[x]) : DisplayBlendShape(groupShapes[x], out delete);
+            }
+            #endregion
 
-							if(delete)
-								deleteFromGroup = x;
+            #region Morph Groups
 
-//							if(tempLock != groupShapes[x].isLocked)
-//							{
-//								Undo.RecordObject(data, "Lock Blendshape");
-//								if(tempLock)
-							//									data.LockBlendshape(groupShapes[x].ID);
-//								else
-							//									data.UnlockBlendshape(groupShapes[x].ID);
-//								EditorUtility.SetDirty(data);
-//							}
-							if(temp != groupShapes[x].currentValue)
-							{
-								Undo.RecordObject(data, "Change Blendshape");
-								data.SetBlendshapeValue(groupShapes[x].ID, temp);
-								EditorUtility.SetDirty(data);
-							}
-						}
-						if(deleteFromGroup >= 0)
-						{	
-							Undo.RecordObject(data, "Delete Blendshape from Group");
-							groupShapes.RemoveAt(deleteFromGroup);
-							EditorUtility.SetDirty(data);
-						}
+            var body = charMan.gameObject.GetComponentInChildren<CIbody>();
+            var morphTypeGroup = MorphGroupService.GetMorphGroups(body.dazName);
+            if (morphTypeGroup != null)
+            {
+                showMorphTypeGroups = EditorGUILayout.Foldout(showMorphTypeGroups, "Morph Groups");
+                if (showMorphTypeGroups)
+                {
+                    charMan.coreMorphs.SortIfNeeded();
+                    EditorGUI.indentLevel++;
+                    foreach (var group in morphTypeGroup.SubGroups.Values)
+                    {
+                        ShowMorphTypeGroup(group);
+                    }
+                    EditorGUI.indentLevel--;
+                }
+            }
 
-						if(!groups[i].isLocked)
-						{
-							if(namesList.Length > 0)
-							{
-								EditorGUILayout.Space();
-								EditorGUILayout.BeginHorizontal();								
-								EditorGUILayout.LabelField("Add Blendshape:", GUILayout.Width(150));
-								EditorGUILayout.LabelField(selectedBlendshapeNames[i], GUILayout.Width(150));
-								MORPH3D.FOUNDATIONS.CoreBlendshape tempBlendshape = data.GetBlendshapeByID(names.GetBlendshapeID(selectedBlendshapeNames[i]));
-								if(selectedBlendshapeNames[i] != "" && selectedBlendshapeNames[i] != null && tempBlendshape == null)
-									selectedBlendshapeNames[i] = "";
-								if(GUILayout.Button("Search"))
-								{
-									int num = i;
-									SearchableWindow.Init(delegate(string newName) { selectedBlendshapeNames[num] = newName; }, namesList);
-								}
-								if(selectedBlendshapeNames[i] != "" && selectedBlendshapeNames[i] != null && tempBlendshape != null && GUILayout.Button("Add"))
-								{
-									Undo.RecordObject(data, "Add Blendshape to Group");
-									groups[i].AddBlendshapeToGroup(tempBlendshape);
-									EditorUtility.SetDirty(data);
-									selectedBlendshapeNames[i] = "";
-								}
-								GUILayout.FlexibleSpace();
-								EditorGUILayout.EndHorizontal();
-							}
-							
-							/*
-							EditorGUILayout.Space();
-							EditorGUILayout.BeginHorizontal();
-							GUILayout.FlexibleSpace();
-							selectedBlendshapeName = EditorGUILayout.Popup(selectedBlendshapeName, namesList);
-							if(GUILayout.Button("Add Shape", GUILayout.Width(100)))
-							{
-								MORPH3D.FOUNDATIONS.CoreBlendshape shape = data.GetBlendshapeByName(names.GetBlendshapeID(namesList[selectedBlendshapeName]));
-								if(shape != null && !groups[i].ContainsBlendshape(shape))
-								{
-									Undo.RecordObject(data, "Add Blendshape to Group");
-									groups[i].AddBlendshapeToGroup(shape);
-									EditorUtility.SetDirty(data);
-									selectedBlendshapeName = 0;
-								}
-							}
-							GUILayout.FlexibleSpace();
-							EditorGUILayout.EndHorizontal();
-							*/
-							
-							EditorGUILayout.Space();
-							EditorGUILayout.BeginHorizontal();
-							GUILayout.FlexibleSpace();
-							if(GUILayout.Button("Delete Group", GUILayout.Width(100)))
-								remove = i;
-							GUILayout.FlexibleSpace();
-							EditorGUILayout.EndHorizontal();	
-						}
-						EditorGUI.indentLevel--;
-					}
-				}
-				if(remove >= 0)
-				{
-					Undo.RecordObject(data, "Remove Blendshape Group");
-					groups.RemoveAt(remove);
-					EditorUtility.SetDirty(data);
-				}
-				EditorGUILayout.Space();
-				EditorGUILayout.BeginHorizontal();
-				GUILayout.FlexibleSpace();
-				if(GUILayout.Button("Add Group", GUILayout.Width(100)))
-				{
-					Undo.RecordObject(data, "Create Blendshape Group");
-					string nextGroupName = data.GetBlendshapeNextGroupName();
-					data.CreateBlendshapeGroup(nextGroupName);
-					EditorUtility.SetDirty(data);
-				}
-				List<MORPH3D.FOUNDATIONS.CoreBlendshape> lst = new List<MORPH3D.FOUNDATIONS.CoreBlendshape>();
-				foreach(MORPH3D.FOUNDATIONS.CoreBlendshape shape in shapes)
-				{
-					if(shape.currentValue <= 0)
-						continue;
-					lst.Add(shape);
-				}
+            #endregion
 
-				if(lst.Count > 0)
-				{
-					if(GUILayout.Button("Save Current Blendshapes to Group", GUILayout.Width(230)))
-					{
-						Undo.RecordObject(data, "Save to Blendshape Group");
-						string nextGroupName = data.GetBlendshapeNextGroupName();
-						data.CreateBlendshapeGroup(nextGroupName, lst);
-						EditorUtility.SetDirty(data);
-					}
-				}
-				GUILayout.FlexibleSpace();
-				EditorGUILayout.EndHorizontal();
-				EditorGUI.indentLevel--;
-			}
-			EditorGUILayout.Space();
-			#endregion blendshapes
+            #region contentPacks
+            showContentPacks = EditorGUILayout.Foldout (showContentPacks, "Content Packs");
 
-			#region contentPacks
-			showContentPacks = EditorGUILayout.Foldout (showContentPacks, "Content Packs");
 			if(showContentPacks)
 			{
+
+
+
 				EditorGUI.indentLevel++;
-				List<ContentPack> allPacks = data.GetAllContentPacks();
+				List<ContentPack> allPacks = charMan.GetAllContentPacks();
 				for(int i = 0; i < allPacks.Count; i++)
 				{
 					EditorGUILayout.BeginHorizontal();
 					EditorGUILayout.LabelField(allPacks[i].name);
 					if(GUILayout.Button("X"))
 					{
-						Undo.RecordObject(data, "Remove Bundle");
-						data.UnloadContentPackFromFigure(allPacks[i]);
-						data.RemoveContentPackFromModel(allPacks[i].RootGameObject, true);
-						EditorUtility.SetDirty(data);
+						Undo.RecordObject(charMan, "Remove Bundle");
+                        charMan.RemoveContentPack(allPacks[i]);
+						EditorUtility.SetDirty(charMan);
 					}
 					EditorGUILayout.EndHorizontal();
 				}
-				GameObject tempPack;
-				tempPack = (GameObject)EditorGUILayout.ObjectField("New", null, typeof(GameObject), false);
+                /*
+                CostumeItem tempPack = null;
+				tempPack = (CostumeItem)EditorGUILayout.ObjectField("New", tempPack, typeof(CostumeItem), true);
 				if(tempPack != null)
 				{
-					ContentPack packScript = new ContentPack(tempPack);
-					Undo.RecordObject(data, "Add Bundle");
-					data.AddContentPack(packScript);
-					EditorUtility.SetDirty(data);
+					ContentPack packScript = new ContentPack(tempPack.gameObject);
+					Undo.RecordObject(charMan, "Add Bundle");
+					charMan.AddContentPack(packScript);
+					EditorUtility.SetDirty(charMan);
 				}
+                */
+                GameObject tempPack = null;
+				tempPack = (GameObject)EditorGUILayout.ObjectField("New", tempPack, typeof(GameObject), true);
+				if(tempPack != null)
+				{
+                    string tPPath = AssetDatabase.GetAssetPath(tempPack);
+                    if (tPPath.EndsWith(".fbx"))
+                    {
+                        //if we dropped an fbx, try replacing it with a matching .prefab instead
+                        tPPath = tPPath.Replace(".fbx", ".prefab");
+                        GameObject prefabObj = AssetDatabase.LoadAssetAtPath<GameObject>(tPPath);
+                        if(prefabObj != null)
+                        {
+                            tempPack = prefabObj;
+                        }
+                    }
+					ContentPack packScript = new ContentPack(tempPack);
+					Undo.RecordObject(charMan, "Add Bundle");
+					charMan.AddContentPack(packScript);
+					EditorUtility.SetDirty(charMan);
+				}
+
+
+                if(GUILayout.Button("Import Selected From Project Pane", m3dDefaultButtonStyle))
+                {
+                    string[] guids = Selection.assetGUIDs;
+                    List<string> paths = new List<string>();
+                    foreach(string guid in guids)
+                    {
+                        string path = AssetDatabase.GUIDToAssetPath(guid);
+
+                        if (System.IO.Directory.Exists(path))
+                        {
+                            string[] prefabPaths = System.IO.Directory.GetFiles(path, "*.prefab", System.IO.SearchOption.AllDirectories);
+                            for(int i = 0; i < prefabPaths.Length; i++)
+                            {
+                                string dirtyPath = prefabPaths[i];
+                                dirtyPath = dirtyPath.Replace(@"\", "/");
+                                paths.Add(dirtyPath);
+                            }
+                        }
+
+                    }
+
+                    foreach (string path in paths)
+                    {
+                        if (path.EndsWith(".prefab"))
+                        {
+                            GameObject go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                            CostumeItem ci = go.GetComponent<CostumeItem>();
+                            if (ci != null)
+                            {
+                                ContentPack packScript = new ContentPack(go);
+                                Undo.RecordObject(charMan, "Add Bundle");
+                                charMan.AddContentPack(packScript);
+                                EditorUtility.SetDirty(charMan);
+                            }
+                        }
+                    }
+                }
+
+                if(GUILayout.Button("Clear Lingering Content Packs", m3dDefaultButtonStyle))
+                {
+                    charMan.RemoveRogueContent();
+                }
+
 				EditorGUI.indentLevel--;
 			}
 			EditorGUILayout.Space();
@@ -352,15 +276,15 @@ namespace MORPH3D.EDITORS
 			if(showHair)
 			{
 				EditorGUI.indentLevel++;
-				List<MORPH3D.COSTUMING.CIhair> allHair = data.GetAllHair();
+				List<MORPH3D.COSTUMING.CIhair> allHair = charMan.GetAllHair();
 				foreach(MORPH3D.COSTUMING.CIhair mesh in allHair)
 				{
 					if(DisplayHair(mesh))
 					{
-						Undo.RecordObject(data, "Toggle Hair");
-						mesh.isVisible = !mesh.isVisible;
+						Undo.RecordObject(charMan, "Toggle Hair");
+                        mesh.SetVisibility(!mesh.isVisible);
 						//						data.SetVisibilityOnHairItem(mesh.ID, !mesh.isVisible);
-						EditorUtility.SetDirty(data);
+						EditorUtility.SetDirty(charMan);
 					}
 				}
 				EditorGUI.indentLevel--;
@@ -375,7 +299,7 @@ namespace MORPH3D.EDITORS
 				EditorGUI.indentLevel++;
 
 				List<CIclothing> allClothing = null;
-				allClothing = data.GetAllClothing();
+				allClothing = charMan.GetAllClothing();
 				foreach(CIclothing mesh in allClothing)
 				{
 //					bool tempLock;
@@ -393,9 +317,9 @@ namespace MORPH3D.EDITORS
 
 					if(temp)
 					{
-						Undo.RecordObject(data, "Toggle Clothing");
-						data.SetClothingVisibility(mesh.ID, !mesh.isVisible);
-						EditorUtility.SetDirty(data);
+						Undo.RecordObject(charMan, "Toggle Clothing");
+						charMan.SetClothingVisibility(mesh.ID, !mesh.isVisible);
+						EditorUtility.SetDirty(charMan);
 					}
 				}
 				EditorGUI.indentLevel--;
@@ -404,7 +328,7 @@ namespace MORPH3D.EDITORS
 			#endregion clothing
 
 			#region props
-			CIattachmentPoint[] attachmentPoints = data.GetAllAttachmentPoints();
+			CIattachmentPoint[] attachmentPoints = charMan.GetAllAttachmentPoints();
 //			Debug.Log("AP LENGTH:"+attachmentPoints.Length);
 			if(showAttachmentPointsGroups == null || showAttachmentPointsGroups.Length != attachmentPoints.Length)
 				showAttachmentPointsGroups = new bool[attachmentPoints.Length];
@@ -414,13 +338,18 @@ namespace MORPH3D.EDITORS
 			*/	
 			if(selectedPropsNames == null || selectedPropsNames.Length != attachmentPoints.Length)
 				selectedPropsNames = new string[attachmentPoints.Length];
-			List<CIprop> props = data.GetAllLoadedProps();
+			List<CIprop> props = charMan.GetAllLoadedProps();
+            Dictionary<string, string> idToName = new Dictionary<string, string>();
 			string[] propsNames = new string[]{};
 			if(props != null){
 				propsNames = new string[props.Count];
+
 			}
-			for(int i = 0; i < propsNames.Length; i++)
-				propsNames[i] = props[i].ID;
+            for (int i = 0; i < propsNames.Length; i++)
+            {
+                propsNames[i] = props[i].dazName + "|" + props[i].ID;
+                idToName[props[i].ID] = props[i].dazName;
+            }
 
 			showAttachmentPoints = EditorGUILayout.Foldout (showAttachmentPoints, "Attachment Points");
 			if(showAttachmentPoints)
@@ -448,9 +377,9 @@ namespace MORPH3D.EDITORS
 						}
 						if(destroyProp >= 0)
 						{
-							Undo.RecordObject(data, "Destroy Prop");
-							data.DetachPropFromAttachmentPoint(activeProps[destroyProp].ID, attachmentPoints[i].attachmentPointName);
-							EditorUtility.SetDirty(data);
+							Undo.RecordObject(charMan, "Destroy Prop");
+							charMan.DetachPropFromAttachmentPoint(activeProps[destroyProp].ID, attachmentPoints[i].attachmentPointName);
+							EditorUtility.SetDirty(charMan);
 						}
 //						Debug.Log("GF");
 						if(propsNames.Length > 0)
@@ -458,20 +387,34 @@ namespace MORPH3D.EDITORS
 //							Debug.Log("FDFG");
 							EditorGUILayout.Space();
 							EditorGUILayout.BeginHorizontal();
-							EditorGUILayout.LabelField("Add Prop:", GUILayout.Width(150));
-							EditorGUILayout.LabelField(selectedPropsNames[i], GUILayout.Width(150));
-							if(selectedPropsNames[i] != "" && selectedPropsNames[i] != null && data.GetLoadedPropByName(selectedPropsNames[i]) == null)
+
+                            string propDisplay = !string.IsNullOrEmpty(selectedPropsNames[i]) ? idToName[selectedPropsNames[i]] : null;
+
+                            EditorGUILayout.LabelField("Add Prop:", GUILayout.Width(150));
+							EditorGUILayout.LabelField(propDisplay, GUILayout.Width(150));
+							if(selectedPropsNames[i] != "" && selectedPropsNames[i] != null && charMan.GetLoadedPropByName(selectedPropsNames[i]) == null)
 								selectedPropsNames[i] = "";
 							if(GUILayout.Button("Search"))
 							{
 								int num = i;
-								SearchableWindow.Init(delegate(string newName) { selectedPropsNames[num] = newName; }, propsNames);
+								SearchableWindow.Init(delegate(string newName) {
+
+                                    string id = newName;
+                                    int pos = newName.LastIndexOf('|');
+                                    if (pos >= 0)
+                                    {
+                                        id = newName.Substring(pos + 1);
+                                    }
+
+                                    selectedPropsNames[num] = id;
+                                }, propsNames);
 							}
 							if(selectedPropsNames[i] != "" && selectedPropsNames[i] != null && GUILayout.Button("Add"))
 							{
-								Undo.RecordObject(data, "Attach Prop");
-								data.AttachPropToAttachmentPoint(selectedPropsNames[i], attachmentPoints[i].attachmentPointName);
-								EditorUtility.SetDirty(data);
+								Undo.RecordObject(charMan, "Attach Prop");
+                                //UnityEngine.Debug.Log("Prop:" + selectedPropsNames[i]);
+								charMan.AttachPropToAttachmentPoint(selectedPropsNames[i], attachmentPoints[i].attachmentPointName);
+								EditorUtility.SetDirty(charMan);
 								selectedPropsNames[i] = "";
 							}
 							GUILayout.FlexibleSpace();
@@ -499,24 +442,24 @@ namespace MORPH3D.EDITORS
 				if(deleteAttachment >= 0)
 				{
 					Undo.RecordObject(attachmentPoints[deleteAttachment], "Delete Attachment Point");
-					data.DeleteAttachmentPoint(attachmentPoints[deleteAttachment].attachmentPointName);
+					charMan.DeleteAttachmentPoint(attachmentPoints[deleteAttachment].attachmentPointName);
 				}
 
 				EditorGUILayout.Space();
 				EditorGUILayout.BeginHorizontal();
 				EditorGUILayout.LabelField("New Point:", GUILayout.Width(150));
 				EditorGUILayout.LabelField(selectedNewAttachmentPointName, GUILayout.Width(150));
-				Transform tempBone = data.GetBoneByName (selectedNewAttachmentPointName);
+				Transform tempBone = charMan.GetBoneByName (selectedNewAttachmentPointName);
 				if(selectedNewAttachmentPointName != "" && selectedNewAttachmentPointName != null && tempBone == null)
 					selectedNewAttachmentPointName = "";
 				if(GUILayout.Button("Search"))
 				{
-					SearchableWindow.Init(delegate(string newName) { selectedNewAttachmentPointName = newName; }, data.GetAllBonesNames());
+					SearchableWindow.Init(delegate(string newName) { selectedNewAttachmentPointName = newName; }, charMan.GetAllBonesNames());
 				}
 				if(selectedNewAttachmentPointName != "" && selectedNewAttachmentPointName != null && tempBone != null && GUILayout.Button("Add"))
 				{
 					Undo.RecordObject(tempBone.gameObject, "New Attachment Point");
-					data.CreateAttachmentPointOnBone(selectedNewAttachmentPointName);
+					charMan.CreateAttachmentPointOnBone(selectedNewAttachmentPointName);
 					selectedNewAttachmentPointName = "";
 				}
 				GUILayout.FlexibleSpace();
@@ -557,55 +500,298 @@ namespace MORPH3D.EDITORS
 				EditorGUI.indentLevel--;
 			}
 			EditorGUILayout.Space();
-			#endregion props
-		}
+            #endregion props
 
-		#region blendshapes_display
-		protected float DisplayBlendShape(MORPH3D.FOUNDATIONS.CoreBlendshape shape)
-		{
-			float result;
-			EditorGUILayout.BeginHorizontal();
+            #region advanced
 
 
+            showAdvanced = EditorGUILayout.Foldout(showAdvanced, "Advanced");
+            if (showAdvanced)
+            {
+			    EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Recalculate Bounds Frequency");
+                EditorGUILayout.EndHorizontal();
 
-			result = EditorGUILayout.Slider(GetLabelToDisplay(shape), shape.currentValue, 0f, 100f);
-//			lockShape = EditorGUILayout.Toggle(shape.isLocked);
-			
-			EditorGUILayout.EndHorizontal();
-			
-			return result;
-		}
+			    EditorGUILayout.BeginHorizontal();
+                List<BoundsOptionsIndex> boundsOptions = new List<BoundsOptionsIndex>();
+                boundsOptions.Add(new BoundsOptionsIndex(0, COSTUME_BOUNDS_UPDATE_FREQUENCY.NEVER));
+                boundsOptions.Add(new BoundsOptionsIndex(1, COSTUME_BOUNDS_UPDATE_FREQUENCY.ON_ATTACH));
+                boundsOptions.Add(new BoundsOptionsIndex(2, COSTUME_BOUNDS_UPDATE_FREQUENCY.ON_MORPH));
 
-		protected string GetLabelToDisplay(MORPH3D.FOUNDATIONS.CoreBlendshape shape){
-			string name_to_display = names.GetLabelFromBlendshapeID(shape.ID);
-			if (string.IsNullOrEmpty (name_to_display) == true)
-				name_to_display = shape.ID;
-			return name_to_display;
-		}
+                int currentSlot = 0;
+                string[] boundsOptionsText = new string[boundsOptions.Count];
+                for(int i = 0; i < boundsOptions.Count; i++)
+                {
+                    if(boundsOptions[i].frequency == charMan.CostumeBoundsUpdateFrequency)
+                    {
+                        currentSlot = i;
+                    }
+                    boundsOptionsText[i] = boundsOptions[i].display;
 
-		protected float DisplayBlendShape(MORPH3D.FOUNDATIONS.CoreBlendshape shape, out bool delete)
-		{
-			float result;
-			EditorGUILayout.BeginHorizontal();
+                }
 
-			string showName = GetLabelToDisplay (shape);//names.GetLabelFromBlendshapeID (shape.ID);
-			result = EditorGUILayout.Slider((string.IsNullOrEmpty(showName)) ? shape.ID : showName, shape.currentValue, 0f, 100f);
-//			lockShape = EditorGUILayout.Toggle(shape.isLocked);
-			delete = GUILayout.Button ("X");
-			
-			EditorGUILayout.EndHorizontal();
-			
-			return result;
-		}
-		#endregion blendshapes_display
+				Undo.RecordObject(charMan, "Alter Bounds Frequency");
+                int boundsSlot = EditorGUILayout.Popup(currentSlot, boundsOptionsText);
+                charMan.CostumeBoundsUpdateFrequency = boundsOptions[boundsSlot].frequency;
+				EditorUtility.SetDirty(charMan);
+                EditorGUILayout.EndHorizontal();
 
-		#region clothing_display
-		protected bool DisplayClothingMesh(MORPH3D.COSTUMING.CIclothing mesh)
+                EditorGUILayout.BeginHorizontal();
+                bool resetBlendshapesOnStart = EditorGUILayout.Toggle("Reset Blendshapes on Start",charMan.ResetBlendshapesOnStart);
+                if(resetBlendshapesOnStart != charMan.ResetBlendshapesOnStart)
+                {
+                    Undo.RecordObject(charMan, "Reset Blendshapes on Start");
+                    charMan.ResetBlendshapesOnStart = resetBlendshapesOnStart;
+                    EditorUtility.SetDirty(charMan);
+                }
+                EditorGUILayout.EndHorizontal();
+
+
+                EditorGUILayout.BeginHorizontal();
+                bool forceJawShut = EditorGUILayout.Toggle("Force Jaw Shut",charMan.ForceJawShut);
+                if(forceJawShut != charMan.ForceJawShut)
+                {
+                    Undo.RecordObject(charMan, "Force Jaw Shut");
+                    charMan.ForceJawShut = forceJawShut;
+                    EditorUtility.SetDirty(charMan);
+                }
+                EditorGUILayout.EndHorizontal();
+
+
+
+                //We're not quite ready to support this w/o having documentation about it
+                /*
+                if (charMan.alphaInjection != null)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField("Alpha Injection");
+                    EditorGUILayout.EndHorizontal();
+                    if (GUILayout.Button("Force Current Mats into Buffer (use non-instanced mats)", m3dDefaultButtonStyle))
+                    {
+                        Undo.RecordObject(charMan.alphaInjection, "Force Update AI");
+                        charMan.alphaInjection.ForceCurrentMaterialsIntoOriginals();
+                        EditorUtility.SetDirty(charMan.alphaInjection);
+                    }
+                }
+                */
+            }
+
+            #endregion
+        }
+
+        #region morphs_display
+
+        public void ShowMorphTypeGroup(FOUNDATIONS.MorphGroup group)
+        {
+            group.IsOpenInEditor = EditorGUILayout.Foldout(group.IsOpenInEditor, group.Key);
+            if (group.IsOpenInEditor)
+            {
+                EditorGUI.indentLevel++;
+                foreach (var key in group.SubGroups.Keys)
+                {
+                    ShowMorphTypeGroup(group.SubGroups[key]);
+                }
+                Predicate<FOUNDATIONS.Morph> morphIsInThisGroup = (morph) => group.Morphs.ContainsKey(morph.name);
+                var morphs = charMan.coreMorphs.morphs.FindAll(morphIsInThisGroup);
+                EditorMorphs(morphs);
+                EditorGUI.indentLevel--;
+            }
+        }
+
+        protected void EditorMorphs(List<FOUNDATIONS.Morph> morphs)
+        {
+            List<FOUNDATIONS.Morph> dirtyMorphValues = new List<FOUNDATIONS.Morph>();
+            List<FOUNDATIONS.Morph> dirtyMorphAttachments = new List<FOUNDATIONS.Morph>();
+            List<FOUNDATIONS.Morph> dirtyMorphDettachments = new List<FOUNDATIONS.Morph>();
+
+            EditorMorphs(morphs, dirtyMorphValues, dirtyMorphAttachments, dirtyMorphDettachments);
+
+            if (dirtyMorphDettachments.Count > 0 || dirtyMorphAttachments.Count > 0 || dirtyMorphValues.Count > 0)
+            {
+                charMan.coreMorphs.DettachMorphs(dirtyMorphDettachments.ToArray());
+                charMan.coreMorphs.AttachMorphs(dirtyMorphAttachments.ToArray());
+                charMan.coreMorphs.SyncMorphValues(dirtyMorphValues.ToArray());
+                charMan.SyncAllBlendShapes();
+            }
+        }
+
+        protected void EditorMorphs(List<MORPH3D.FOUNDATIONS.Morph> morphs, List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphValues, List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphAttachments,
+            List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphDettachments)
+        {
+            string searchKey = null;
+            if (!String.IsNullOrEmpty(selectedBlendShape))
+            {
+                searchKey = selectedBlendShape.ToLower();
+            }
+
+            for (int i = 0; i < morphs.Count; i++)
+            {
+                MORPH3D.FOUNDATIONS.Morph morph = morphs[i];
+
+                if (!String.IsNullOrEmpty(selectedBlendShape))
+                {
+                    if(!morph.name.ToLower().Contains(searchKey) && !morph.displayName.ToLower().Contains(searchKey) && !morph.localName.ToLower().Contains(searchKey))
+                    {
+                        continue;
+                    }
+                }
+
+                EditorMorphState ems = HandleEditorMorphState(morph);
+
+                if (ems.dirty)
+                {
+                    //we need to update this morph
+                    if (ems.dirtyAttached)
+                    {
+                        if (ems.attached)
+                        {
+                            morph.attached = true;
+                            dirtyMorphAttachments.Add(morph);
+                        }
+                        else
+                        {
+                            morph.attached = false;
+                            dirtyMorphDettachments.Add(morph);
+                        }
+                    }
+
+                    if (ems.dirtyValue)
+                    {
+                        morph.value = ems.value;
+
+                        if (!morph.attached && ems.value > 0f)
+                        {
+                            //if it wasn't attached and the slider is not 0 attach it
+                            morph.attached = true;
+                            dirtyMorphAttachments.Add(morph);
+                        }
+                        dirtyMorphValues.Add(morph);
+                    }
+
+                    //replace the object with our modified one, why doesn't c# support references for local vars.... this is stupid
+                    morphs[i] = morph;
+
+                    //Debug.Log("Morph: " + morph.name + " | " + morph.value + " | " + data.coreMorphs.morphs[i].value + " | " + (ems.dirtyValue ? " DIRTY VALUE " : "") + (ems.dirtyAttached ? " DIRTY ATTACH " : "") );
+                }
+            }
+        }
+
+        ///// <summary>
+        ///// Renders the Morph Panel
+        ///// </summary>
+        //protected void HandleMorphsPane()
+        //{
+
+        //    List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphValues = new List<MORPH3D.FOUNDATIONS.Morph>();
+        //    List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphAttachments = new List<MORPH3D.FOUNDATIONS.Morph>();
+        //    List<MORPH3D.FOUNDATIONS.Morph> dirtyMorphDettachments = new List<MORPH3D.FOUNDATIONS.Morph>();
+
+        //    for (int i = 0; i < charMan.coreMorphs.morphs.Count; i++) 
+        //    {
+        //        if (selectedBlendShape != "" &&
+        //            charMan.coreMorphs.morphs[i].displayName.IndexOf(selectedBlendShape, StringComparison.OrdinalIgnoreCase) < 0)
+        //        {
+        //            continue;
+        //        }
+
+        //        MORPH3D.FOUNDATIONS.Morph morph = charMan.coreMorphs.morphs[i];
+        //        EditorMorphState ems = HandleEditorMorphState(morph);
+
+        //        if (ems.dirty)
+        //        {
+        //            //we need to update this morph
+
+        //            if (ems.dirtyAttached)
+        //            {
+        //                if (ems.attached)
+        //                {
+        //                    morph.attached = true;
+        //                    dirtyMorphAttachments.Add(morph);
+        //                }
+        //                else
+        //                {
+        //                    morph.attached = false;
+        //                    dirtyMorphDettachments.Add(morph);
+        //                }
+        //            }
+
+        //            if (ems.dirtyValue)
+        //            {
+        //                morph.value = ems.value;
+
+        //                if(!morph.attached && ems.value > 0f)
+        //                {
+        //                    //if it wasn't attached and the slider is not 0 attach it
+        //                    morph.attached = true;
+        //                    dirtyMorphAttachments.Add(morph);
+        //                }
+        //                dirtyMorphValues.Add(morph);
+        //            }
+
+        //            //replace the object with our modified one, why doesn't c# support references for local vars.... this is stupid
+        //            charMan.coreMorphs.morphs[i] = morph;
+
+        //            //Debug.Log("Morph: " + morph.name + " | " + morph.value + " | " + data.coreMorphs.morphs[i].value + " | " + (ems.dirtyValue ? " DIRTY VALUE " : "") + (ems.dirtyAttached ? " DIRTY ATTACH " : "") );
+        //        }
+        //    }
+
+        //    if (dirtyMorphDettachments.Count > 0 || dirtyMorphAttachments.Count > 0 || dirtyMorphValues.Count > 0)
+        //    {
+        //        charMan.coreMorphs.DettachMorphs(dirtyMorphDettachments.ToArray());
+        //        charMan.coreMorphs.AttachMorphs(dirtyMorphAttachments.ToArray());
+        //        charMan.coreMorphs.SyncMorphValues(dirtyMorphValues.ToArray());
+        //        charMan.SyncAllBlendShapes();
+        //    }
+            
+        //}
+
+        
+        protected EditorMorphState HandleEditorMorphState(MORPH3D.FOUNDATIONS.Morph morph)
+        {
+            EditorMorphState ems = new EditorMorphState();
+            ems.dirty = false;
+
+            GUILayoutOption[] optionsLabel = new GUILayoutOption[] { GUILayout.MaxWidth(200.0f), GUILayout.MinWidth(25.0f), GUILayout.ExpandWidth(false) };
+            GUILayoutOption[] optionsSlider = new GUILayoutOption[] { GUILayout.ExpandWidth(true) };
+            GUILayoutOption[] optionsKey = new GUILayoutOption[] { GUILayout.MaxWidth(200.0f), GUILayout.MinWidth(0.0f), GUILayout.Height(EditorGUIUtility.singleLineHeight) };
+            GUILayoutOption[] optionsToggle = new GUILayoutOption[] { GUILayout.Width(40f),  GUILayout.ExpandWidth(false) };
+
+            EditorGUILayout.BeginHorizontal();
+            //Show the slider between 0% and 100% for the morph
+
+            EditorGUILayout.LabelField(morph.displayName, optionsLabel);
+            ems.value = EditorGUILayout.Slider(morph.value, 0f, 100f, optionsSlider);
+            //Show the checkbox for if this morph should be installed to the figure/mesh
+            ems.attached = EditorGUILayout.Toggle(morph.attached, optionsToggle); //most efficient way, but not necessarily the most accurate way
+            //ems.attached = EditorGUILayout.Toggle(charMan.coreMorphs.morphGroups["Attached"].Contains(morph)); //most accurate way but not O(1);
+            //has a property changed?
+            if (ems.attached != morph.attached)
+            {
+                ems.dirtyAttached = true;
+                ems.dirty = true;
+            }
+            if (Mathf.Abs(ems.value - morph.value) > 0.001f)
+            {
+                ems.dirtyValue = true;
+                ems.dirty = true;
+            }
+
+            EditorGUILayout.SelectableLabel(morph.localName, EditorStyles.textField, optionsKey);
+
+            EditorGUILayout.EndHorizontal();
+
+            return ems;
+        }
+        #endregion
+
+        #region clothing_display
+        protected bool DisplayClothingMesh(MORPH3D.COSTUMING.CIclothing mesh)
 		{
 			bool result;
 			EditorGUILayout.BeginHorizontal();
 
-			EditorGUILayout.LabelField (mesh.ID, GUILayout.Width(150));
+            string labelStr = String.IsNullOrEmpty(mesh.name) ? mesh.ID : mesh.name;
+			EditorGUILayout.LabelField (labelStr, GUILayout.Width(150));
 			if(mesh.isVisible)
 				GUILayout.Space (60);
 			result = GUILayout.Button ((mesh.isVisible) ? "Disable" : "Enable", GUILayout.Width(60));
@@ -628,7 +814,7 @@ namespace MORPH3D.EDITORS
 		{
 			bool result;
 			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField (prop.ID, GUILayout.Width(180));
+			EditorGUILayout.LabelField (prop.dazName, GUILayout.Width(180));
 			GUILayout.Space (60);
 			result = GUILayout.Button ("Disable", GUILayout.Width(60));
 			EditorGUILayout.EndHorizontal();
@@ -642,7 +828,8 @@ namespace MORPH3D.EDITORS
 		{
 			bool result;
 			EditorGUILayout.BeginHorizontal();
-			EditorGUILayout.LabelField (mesh.ID, GUILayout.Width(150));
+            string labelStr = String.IsNullOrEmpty(mesh.name) ? mesh.ID : mesh.name;
+			EditorGUILayout.LabelField (labelStr, GUILayout.Width(150));
 			if(mesh.isVisible)
 				GUILayout.Space (60);
 			result = GUILayout.Button ((mesh.isVisible) ? "Disable" : "Enable", GUILayout.Width(60));
@@ -652,6 +839,23 @@ namespace MORPH3D.EDITORS
 			
 			return result;
 		}
-		#endregion hair_display
-	}
+        #endregion hair_display
+
+        protected struct BoundsOptionsIndex
+        {
+            public int index;
+            public COSTUME_BOUNDS_UPDATE_FREQUENCY frequency;
+            public string display;
+
+            public BoundsOptionsIndex(int index, COSTUME_BOUNDS_UPDATE_FREQUENCY frequency, string display = null)
+            {
+                this.index = index;
+                this.frequency = frequency;
+                this.display = display == null ? frequency.ToString() : display;
+            }
+        }
+    }
+
+
+
 }

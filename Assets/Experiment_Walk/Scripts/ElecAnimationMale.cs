@@ -46,7 +46,7 @@ public class ElecAnimationMale : MonoBehaviour
 	private bool electrical;
 	public bool lastStimulation;
 
-	private AudioSource audioSourse;
+	public AudioSource audioSourse;
 	public AudioClip clip1;
 	public AudioClip clip2;
 	public AudioClip clip3;
@@ -63,7 +63,7 @@ public class ElecAnimationMale : MonoBehaviour
 
     public string hostIP = "133.10.79.170";
 	//電気刺激装置（Arduino）のIP
-	private string footIP = "133.10.79.89";
+	public string footIP = "133.10.79.89";
 	//研究室IP
 	public int hostPort = 61000;
 	static private UdpClient client1;
@@ -88,20 +88,20 @@ public class ElecAnimationMale : MonoBehaviour
 	{
         getExperimentInfo();  //ExperimentParamatersの取得
         anim = GetComponent<Animator> ();//被験者キャラクターのアニメーター取得
-		footSoundLeft = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/lThigh/lShin/lFoot").GetComponent<AudioSource> ();
-		footSoundRight = GameObject.Find (gameObject.name + "/Genesis 2 Male/hip/pelvis/rThigh/rShin/rFoot").GetComponent<AudioSource> ();
+		footSoundLeft = GameObject.Find (gameObject.name + "/M3DMale/hip/pelvis/lThighBend/lThighTwist/lShin/lFoot").GetComponent<AudioSource> ();
+		footSoundRight = GameObject.Find (gameObject.name + "/M3DMale/hip/pelvis/rThighBend/rThighTwist/rShin/rFoot").GetComponent<AudioSource> ();
         switch (hmd_type)
         {
             case HMD_TYPE.Oculus:
-                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").SetActive(true);
-                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").SetActive(false);
-                recenter_Oculus = GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").GetComponent<Recenter_Oculus>();
+                GameObject.Find(gameObject.name + "/M3DMale/Camera").SetActive(true);
+                GameObject.Find(gameObject.name + "/M3DMale/[CameraRig]").SetActive(false);
+                recenter_Oculus = GameObject.Find(gameObject.name + "/M3DMale/Camera").GetComponent<Recenter_Oculus>();
                 break;
 
             case HMD_TYPE.Vive:
-                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/Camera").SetActive(false);
-                GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").SetActive(true);
-                recenter_Vive = GameObject.Find(gameObject.name + "/Genesis 2 Male/G2FSimplifiedEyes/[CameraRig]").GetComponent<Recenter_Vive>();
+                GameObject.Find(gameObject.name + "/M3DMale/Camera").SetActive(false);
+                GameObject.Find(gameObject.name + "/M3DMale/[CameraRig]").SetActive(true);
+                recenter_Vive = GameObject.Find(gameObject.name + "/M3DMale/[CameraRig]").GetComponent<Recenter_Vive>();
                 break;
         }
         
@@ -329,7 +329,7 @@ public class ElecAnimationMale : MonoBehaviour
         switch (hmd_type)
         {
             case HMD_TYPE.Vive:
-                recenter_Vive.FadeIn();
+                StartCoroutine(recenter_Vive.FadeIn());
                 break;
 
             case HMD_TYPE.Oculus:
@@ -346,7 +346,7 @@ public class ElecAnimationMale : MonoBehaviour
         switch (hmd_type)
         {
             case HMD_TYPE.Vive:
-                recenter_Vive.FadeOut();
+                StartCoroutine(recenter_Vive.FadeOut());
                 break;
 
             case HMD_TYPE.Oculus:

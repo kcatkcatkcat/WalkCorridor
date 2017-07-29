@@ -59,6 +59,7 @@
 			float4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
 			o.Albedo = c.rgba;
 			o.Alpha = tex2D(_AlphaTex, IN.uv_MainTex.xy).r;//use our custom alpha map
+
 			clip(o.Alpha - _AlphaCutoff);
 
 			o.Alpha = c.a;

@@ -195,5 +195,7 @@ float4 Parallax (float4 texcoords, half3 viewDir)
 	return float4(texcoords.xy + offset, texcoords.zw + offset);
 #endif
 }
+
+
 			
 #endif // UNITY_STANDARD_INPUT_INCLUDED

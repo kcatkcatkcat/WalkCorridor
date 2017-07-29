@@ -76,7 +76,7 @@ Shader "Morph3D/Volund Variants/Standard Hair"
 			CGPROGRAM
 			#pragma target 3.0
 			
-			#pragma only_renderers d3d11 d3d9 opengl glcore gles3 gles
+			#pragma only_renderers d3d11 d3d9 opengl glcore gles3 gles metal
 			
 			#pragma shader_feature _NORMALMAP
 			#pragma multi_compile _ _ALPHATEST_ON
@@ -116,7 +116,7 @@ Shader "Morph3D/Volund Variants/Standard Hair"
 			CGPROGRAM
 			#pragma target 3.0
 			
-			#pragma only_renderers d3d11 d3d9 opengl glcore gles3 gles
+			#pragma only_renderers d3d11 d3d9 opengl glcore gles3 gles metal
 
 			#pragma shader_feature _NORMALMAP
 			#pragma multi_compile _ _ALPHATEST_ON _ALPHABLEND_ON
@@ -150,7 +150,7 @@ Shader "Morph3D/Volund Variants/Standard Hair"
 			CGPROGRAM
 			#pragma target 3.0
 
-			#pragma only_renderers d3d11 d3d9 opengl glcore gles3 gles
+			#pragma only_renderers d3d11 d3d9 opengl glcore gles3 gles metal
 			
 			#define UNITY_BRDF_PBS BRDF1_Unity_PBS_KK
 

@@ -5,6 +5,8 @@ Shader "Morph3D/Volund Variants/Standard Character (Specular, Surface)"
 		_Color("Color", Color) = (1,1,1,1)
 		_MainTex("Albedo", 2D) = "white" {}
 		_AlphaTex("Alpha", 2D) = "white" {}
+		_Overlay("Overlay",2D) = "clear" {}
+		_OverlayColor("OverlayColor", Color) = (0,0,0,0)
 		
 		_Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
@@ -29,6 +31,7 @@ Shader "Morph3D/Volund Variants/Standard Character (Specular, Surface)"
 		_DetailAlbedoMap("Detail Albedo x2", 2D) = "grey" {}
 		_DetailNormalMapScale("Scale", Float) = 1.0
 		_DetailNormalMap("Normal Map", 2D) = "bump" {}
+
 
 		[Enum(UV0,0,UV1,1)] _UVSec ("UV Set for secondary textures", Float) = 0
 
@@ -60,42 +63,45 @@ Shader "Morph3D/Volund Variants/Standard Character (Specular, Surface)"
 	SubShader
 	{
 		Tags {
-			"RenderType"="Opaque"
+			//"RenderType"="Opaque"
+			"RenderType"="Transparent"
+			"Queue"="Transparent"
 			"PerformanceChecks"="False"
 		}
 		LOD 300
-	
 
-		// ------------------------------------------------------------------
-		//  Base forward pass (directional light, emission, lightmaps, ...)
-		Pass
+			Pass
 		{
-			Name "FORWARD" 
-			Tags { "LightMode" = "ForwardBase" }
+			Name "FORWARD"
+			Tags{ "LightMode" = "ForwardBase" }
 
-			Blend [_SrcBlend] [_DstBlend]
-			ZWrite [_ZWrite]
-			Cull [_CullMode]
+			//Blend [_SrcBlend] [_DstBlend]
+			Blend SrcAlpha OneMinusSrcAlpha
+			ZWrite[_ZWrite]
+			Cull[_CullMode]
 
 			CGPROGRAM
 			#pragma target 3.0
 			//#pragma only_renderers d3d11 d3d9 opengl glcore
-			
+
 			// -------------------------------------
-					
+
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _EMISSION
 			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
-			#pragma shader_feature _AlphaTex;
-			
-			// Volund variants
+			#pragma shader_feature _AlphaTex
+			#pragma shader_feature _OVERLAY
+
+						// Volund variants
 			#pragma shader_feature SMOOTHNESS_IN_ALBEDO
 
+			//We only use the overlay on the base, we don't apply it anywhere else
+			#pragma multi_compile OVERLAY_OFF OVERLAY_ON 
 			#pragma multi_compile_fwdbase nolightmap
 			#pragma multi_compile_fog
-				
+
 			#pragma vertex vertForwardBase
 			#pragma fragment fragForwardBase
 
@@ -126,6 +132,7 @@ Shader "Morph3D/Volund Variants/Standard Character (Specular, Surface)"
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature _OVERLAY
 
 			
 			// Volund variants

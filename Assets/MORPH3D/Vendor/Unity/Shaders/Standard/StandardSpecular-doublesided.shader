@@ -8,6 +8,7 @@ Shader "Morph3D/Standard (Specular setup) - Double Sided"
 		_Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
 		_Glossiness("Smoothness", Range(0.0, 1.0)) = 0.5
+		_GlossMapScale("Smoothness Factor", Range(0.0, 1.0)) = 1.0
 		_SpecColor("Specular", Color) = (0.2,0.2,0.2)
 		_SpecGlossMap("Specular", 2D) = "white" {}
 

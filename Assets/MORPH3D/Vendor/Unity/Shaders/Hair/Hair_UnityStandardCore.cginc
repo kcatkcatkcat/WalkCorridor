@@ -1,4 +1,7 @@
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
 // Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
 
 // Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
 
@@ -244,14 +247,25 @@ inline UnityGI FragmentGI (
 		d.ambient = i_ambientOrLightmapUV.rgb;
 		d.lightmapUV = 0;
 	#endif
-	d.boxMax[0] = unity_SpecCube0_BoxMax;
+
+
+	#if UNITY_SPECCUBE_BLENDING || UNITY_SPECCUBE_BOX_PROJECTION
 	d.boxMin[0] = unity_SpecCube0_BoxMin;
+	d.boxMin[1] = unity_SpecCube1_BoxMin;
+	#endif
+
+	#if UNITY_SPECCUBE_BOX_PROJECTION
+	d.boxMax[0] = unity_SpecCube0_BoxMax;
+	d.boxMax[1] = unity_SpecCube1_BoxMax;
 	d.probePosition[0] = unity_SpecCube0_ProbePosition;
+	d.probePosition[1] = unity_SpecCube1_ProbePosition;
+	#endif
+
+
 	d.probeHDR[0] = unity_SpecCube0_HDR;
 
-	d.boxMax[1] = unity_SpecCube1_BoxMax;
-	d.boxMin[1] = unity_SpecCube1_BoxMin;
-	d.probePosition[1] = unity_SpecCube1_ProbePosition;
+
+
 	d.probeHDR[1] = unity_SpecCube1_HDR;
 
 	return UnityGlobalIllumination (
@@ -297,7 +311,11 @@ VertexOutputForwardBase vertForwardBase (VertexInput v)
 	VertexOutputForwardBase o;
 	UNITY_INITIALIZE_OUTPUT(VertexOutputForwardBase, o);
 
+#if UNITY_VERSION >= 540
 	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#else
+	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#endif
 	#if UNITY_SPECCUBE_BOX_PROJECTION
 		o.posWorld = posWorld.xyz;
 	#endif
@@ -473,7 +491,11 @@ VertexOutputForwardAdd vertForwardAdd (VertexInput v)
 	VertexOutputForwardAdd o;
 	UNITY_INITIALIZE_OUTPUT(VertexOutputForwardAdd, o);
 	
+#if UNITY_VERSION >= 540
 	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#else
+	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#endif
 	o.pos = UnityObjectToClipPos(v.vertex);
 	o.tex = TexCoords(v);
 	o.eyeVec = NormalizePerVertexNormal(posWorld.xyz - _WorldSpaceCameraPos);

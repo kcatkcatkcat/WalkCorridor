@@ -261,10 +261,16 @@ public class ScoreSheet : MonoBehaviour {
         StartCoroutine(SceneChange(2.0f, hmd_type, "ElecExperiment"));
     }
 
+    private IEnumerator EndExperiment(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
+        Application.Quit();
+    }
+
 	public void OnExitExperiment () {
         WriteData();
         All_HMD_FadeOut();
-        StartCoroutine(SceneChange(2.0f, hmd_type, "End"));
+        StartCoroutine(EndExperiment(2.0f));
 	}
 
     private void All_HMD_FadeIn()
@@ -272,7 +278,7 @@ public class ScoreSheet : MonoBehaviour {
         switch (hmd_type)
         {
             case HMD_TYPE.Vive:
-                recenter_Vive.FadeIn();
+                StartCoroutine(recenter_Vive.FadeIn());
                 break;
 
             case HMD_TYPE.Oculus:
@@ -289,7 +295,7 @@ public class ScoreSheet : MonoBehaviour {
         switch (hmd_type)
         {
             case HMD_TYPE.Vive:
-                recenter_Vive.FadeOut();
+                StartCoroutine(recenter_Vive.FadeOut());
                 break;
 
             case HMD_TYPE.Oculus:

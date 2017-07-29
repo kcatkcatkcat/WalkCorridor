@@ -1,6 +1,4 @@
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+//UNITY_SHADER_NO_UPGRADE
 
 #ifndef UNITY_STANDARD_CORE_INCLUDED
 #define UNITY_STANDARD_CORE_INCLUDED
@@ -217,9 +215,12 @@ inline FragmentCommonData FragmentSetup (float4 i_tex, half3 i_eyeVec, half3 i_n
 	i_tex = Parallax(i_tex, i_viewDirForParallax);
 
 	half alpha = Alpha(i_tex.xy);
+	//handle if we have an alpha on the texture as well
+	alpha *= tex2D(_MainTex, i_tex.xy).a;
 	#if defined(_ALPHATEST_ON)
 		clip (alpha - _Cutoff);
 	#endif
+	alpha = tex2D(_MainTex, i_tex.xy).a;
 
 	#ifdef _NORMALMAP
 		half3 normalWorld = NormalizePerPixelNormal(mul(NormalInTangentSpace(i_tex), i_tanToWorld)); // @TODO: see if we can squeeze this normalize on SM2.0 as well
@@ -239,6 +240,21 @@ inline FragmentCommonData FragmentSetup (float4 i_tex, half3 i_eyeVec, half3 i_n
 
 	// NOTE: shader relies on pre-multiply alpha-blend (_SrcBlend = One, _DstBlend = OneMinusSrcAlpha)
 	o.diffColor = PreMultiplyAlpha (o.diffColor, alpha, o.oneMinusReflectivity, /*out*/ o.alpha);
+	o.alpha = alpha;
+
+#if _OVERLAY
+	//check for our overlay
+	half4 overlay = Overlay(i_tex.xy);
+	if (overlay.a > 0) {
+		//blend the overlay color with the overlay
+		overlay.rgb = ( overlay.rgb * (1 - _OverlayColor.a)) + (_OverlayColor.rgb * _OverlayColor.a);
+		//blend the overlay with the skin
+		overlay.rgb = ((1 - overlay.a) * o.diffColor.rgb) + (overlay.a * overlay.rgb);
+
+		o.diffColor = overlay;
+	}
+#endif
+
 	return o;
 }
 
@@ -259,14 +275,23 @@ inline UnityGI FragmentGI (
 		d.ambient = i_ambientOrLightmapUV.rgb;
 		d.lightmapUV = 0;
 	#endif
-	d.boxMax[0] = unity_SpecCube0_BoxMax;
+
+	#if UNITY_SPECCUBE_BLENDING || UNITY_SPECCUBE_BOX_PROJECTION
 	d.boxMin[0] = unity_SpecCube0_BoxMin;
+	d.boxMin[1] = unity_SpecCube1_BoxMin;
+	#endif
+
+	#if UNITY_SPECCUBE_BOX_PROJECTION
+	d.boxMax[0] = unity_SpecCube0_BoxMax;
+	d.boxMax[1] = unity_SpecCube1_BoxMax;
 	d.probePosition[0] = unity_SpecCube0_ProbePosition;
+	d.probePosition[1] = unity_SpecCube1_ProbePosition;
+	#endif
+
 	d.probeHDR[0] = unity_SpecCube0_HDR;
 
-	d.boxMax[1] = unity_SpecCube1_BoxMax;
-	d.boxMin[1] = unity_SpecCube1_BoxMin;
-	d.probePosition[1] = unity_SpecCube1_ProbePosition;
+
+
 	d.probeHDR[1] = unity_SpecCube1_HDR;
 
 	return UnityGlobalIllumination (
@@ -308,11 +333,15 @@ VertexOutputForwardBase vertForwardBase (VertexInput v)
 	VertexOutputForwardBase o;
 	UNITY_INITIALIZE_OUTPUT(VertexOutputForwardBase, o);
 
+#if UNITY_VERSION >= 540
 	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#else
+	float4 posWorld = mul(_Object2World, v.vertex);
+#endif
 	#if UNITY_SPECCUBE_BOX_PROJECTION
 		o.posWorld = posWorld.xyz;
 	#endif
-	o.pos = UnityObjectToClipPos(v.vertex);
+	o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
 	o.tex = TexCoords(v);
 	o.eyeVec = NormalizePerVertexNormal(posWorld.xyz - _WorldSpaceCameraPos);
 	float3 normalWorld = UnityObjectToWorldNormal(v.normal);
@@ -371,7 +400,8 @@ VertexOutputForwardBase vertForwardBase (VertexInput v)
 }
 
 half4 fragForwardBase (VertexOutputForwardBase i, float face : VFACE) : SV_Target
-{
+{	
+
 	// Experimental normal flipping
 	if(_CullMode < 0.5f)
 		i.tangentToWorldAndParallax[2].xyz *= face;
@@ -388,9 +418,10 @@ half4 fragForwardBase (VertexOutputForwardBase i, float face : VFACE) : SV_Targe
 	half4 c = UNITY_BRDF_PBS (s.diffColor, s.specColor, s.oneMinusReflectivity, s.oneMinusRoughness, s.normalWorld, -s.eyeVec, gi.light, gi.indirect);
 	c.rgb += UNITY_BRDF_GI (s.diffColor, s.specColor, s.oneMinusReflectivity, s.oneMinusRoughness, s.normalWorld, -s.eyeVec, occlusion, gi);
 	c.rgb += Emission(i.tex.xy);
-
 	UNITY_APPLY_FOG(i.fogCoord, c.rgb);
-	return OutputForward (c, s.alpha);
+	half4 final = OutputForward (c, s.alpha);
+	//final.a = 0.2;
+	return final;
 }
 
 // ------------------------------------------------------------------
@@ -415,8 +446,12 @@ VertexOutputForwardAdd vertForwardAdd (VertexInput v)
 	VertexOutputForwardAdd o;
 	UNITY_INITIALIZE_OUTPUT(VertexOutputForwardAdd, o);
 
+#if UNITY_VERSION >= 540
 	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
-	o.pos = UnityObjectToClipPos(v.vertex);
+#else
+	float4 posWorld = mul(_Object2World, v.vertex);
+#endif
+	o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
 	o.tex = TexCoords(v);
 	o.eyeVec = NormalizePerVertexNormal(posWorld.xyz - _WorldSpaceCameraPos);
 	float3 normalWorld = UnityObjectToWorldNormal(v.normal);
@@ -489,11 +524,15 @@ VertexOutputDeferred vertDeferred (VertexInput v)
 	VertexOutputDeferred o;
 	UNITY_INITIALIZE_OUTPUT(VertexOutputDeferred, o);
 
+#if UNITY_VERSION >= 540
 	float4 posWorld = mul(unity_ObjectToWorld, v.vertex);
+#else
+	float4 posWorld = mul(_Object2World, v.vertex);
+#endif
 	#if UNITY_SPECCUBE_BOX_PROJECTION
 		o.posWorld = posWorld.xyz;
 	#endif
-	o.pos = UnityObjectToClipPos(v.vertex);
+	o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
 	o.tex = TexCoords(v);
 	o.eyeVec = NormalizePerVertexNormal(posWorld.xyz - _WorldSpaceCameraPos);
 	float3 normalWorld = UnityObjectToWorldNormal(v.normal);

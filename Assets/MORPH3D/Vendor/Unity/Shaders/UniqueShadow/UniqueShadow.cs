@@ -173,8 +173,12 @@ public class UniqueShadow : MonoBehaviour {
 		m_shadowTexture = new RenderTexture((int)shadowMapSize >> m_downscale, (int)shadowMapSize >> m_downscale, 16, RenderTextureFormat.Shadowmap, RenderTextureReadWrite.Linear);
 		m_shadowTexture.filterMode = FilterMode.Bilinear;
 		m_shadowTexture.useMipMap = false;
+#if UNITY_5_3 || UNITY_5_4
+		m_shadowTexture.generateMips = false;
+#else
 		m_shadowTexture.autoGenerateMips = false;
-		m_shadowCamera.targetTexture =  m_shadowTexture;
+#endif
+        m_shadowCamera.targetTexture =  m_shadowTexture;
 	}
 
 	void ReleaseTarget() {

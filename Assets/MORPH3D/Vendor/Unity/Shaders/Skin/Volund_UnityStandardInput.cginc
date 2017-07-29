@@ -18,6 +18,8 @@ uniform float 		_CullMode;
 
 //MORPH3D uniforms
 uniform sampler2D 	_AlphaTex;
+uniform sampler2D   _Overlay;
+uniform half4       _OverlayColor;
 
 //---------------------------------------
 // Directional lightmaps & Parallax require tangent space too
@@ -60,6 +62,7 @@ half		_UVSec;
 
 half4 		_EmissionColor;
 sampler2D	_EmissionMap;
+
 
 //-------------------------------------------------------------------------------------
 // Input functions
@@ -218,6 +221,15 @@ float4 Parallax (float4 texcoords, half3 viewDir)
 	half h = tex2D (_ParallaxMap, texcoords.xy).g;
 	float2 offset = ParallaxOffset1Step (h, _Parallax, viewDir);
 	return float4(texcoords.xy + offset, texcoords.zw + offset);
+#endif
+}
+
+half4 Overlay(float2 uv)
+{
+#if !defined(_OVERLAY)
+	return 0;
+#else
+	return tex2D(_Overlay, uv);
 #endif
 }
 			
