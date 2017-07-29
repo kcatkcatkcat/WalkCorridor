@@ -59,8 +59,8 @@ MonoBehaviour:
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
-    m_LineSpacing: 1
-  m_Text: "\u3059\u3052\u3047\u6709\u610F\u7FA9\r"
+    m_LineSpacing: 0.6
+  m_Text: "\u5B9F\u969B\u6B69\u884C\u3068\u540C\u7B49\u306E\u611F\u899A\r"
 --- !u!222 &222854471942870982
 CanvasRenderer:
   m_ObjectHideFlags: 1
@@ -82,6 +82,6 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 300, y: -270}
-  m_SizeDelta: {x: 200, y: 20}
+  m_AnchoredPosition: {x: 300, y: -354}
+  m_SizeDelta: {x: 200, y: 44}
   m_Pivot: {x: 0.5, y: 0.5}
