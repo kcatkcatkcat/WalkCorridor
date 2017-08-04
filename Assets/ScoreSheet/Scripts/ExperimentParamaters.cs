@@ -17,7 +17,7 @@ public class ExperimentParamaters : MonoBehaviour {
 	public static List<List<List<string>>> Scores;
 	public static int StimuliNum;//提示刺激数
 	public static int Stimuli;//刺激番号
-    public static bool IsScore;
+    public static bool IsScore = new bool();
     public static HMD_TYPE HMD_Type;
 
     void Start(){

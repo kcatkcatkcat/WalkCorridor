@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public class ElecAnimationMale : MonoBehaviour
 {
-    public bool isScore = false;  //scoreをつけるかどうか
+    public bool isScore;  //scoreをつけるかどうか
     [SerializeField]
     private List<int> conductedStimuliNum;//すでに実行された刺激番号
     private Animator anim;
@@ -379,9 +379,8 @@ public class ElecAnimationMale : MonoBehaviour
     {
         Debug.Log("get experiment paramaters");
         conductedStimuliNum = ExperimentParamaters.ConductedStimuliNum;
-        isScore = ExperimentParamaters.IsScore;
+        isScore =ExperimentParamaters.IsScore;
         experimentNum = ExperimentParamaters.ExperimentNum;
-
     }
 
 	private void stimuliCombination(int num){//刺激番号とそれぞれの刺激の対応

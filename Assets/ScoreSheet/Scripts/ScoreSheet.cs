@@ -199,7 +199,6 @@ public class ScoreSheet : MonoBehaviour {
         Debug.Log("get experiment paramaters");
 
         conductedStimuliNum = ExperimentParamaters.ConductedStimuliNum;
-
         stimuliNum = ExperimentParamaters.StimuliNum;
         stimuli = ExperimentParamaters.Stimuli;
         Scores = ExperimentParamaters.Scores;
