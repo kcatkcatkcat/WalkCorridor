@@ -16,9 +16,10 @@ public class LaserController : MonoBehaviour {
 	protected GameObject laser;
 	protected GameObject cursor;
 
-	public float thickness = 0.002f;
-	public float cursorSize = 0.04f;
-	public Color laserColor = new Color( 1, 1, 0 );
+	public float thickness = 0.001f;
+	public float cursorSize = 0.02f;
+	//public Color laserColor = new Color( 1, 1, 0 );
+    public Material laserMaterial;
 
 	void Start() {
 
@@ -33,15 +34,17 @@ public class LaserController : MonoBehaviour {
 		laser.transform.SetParent(transform, false);
 		laser.transform.localScale = new Vector3( thickness, thickness, 2.0f );
 		laser.transform.localPosition = new Vector3(0.0f, 0.0f, 1.0f);
-		laser.GetComponent<MeshRenderer>().material.color = laserColor;
-		Object.DestroyImmediate(laser.GetComponent<BoxCollider>());
+        laser.GetComponent<MeshRenderer>().material = laserMaterial;
+        //laser.GetComponent<MeshRenderer>().material.color = laserColor;
+        Object.DestroyImmediate(laser.GetComponent<BoxCollider>());
 
 		cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 		cursor.transform.SetParent(transform, false);
 		cursor.transform.localScale = new Vector3( cursorSize, cursorSize, cursorSize );
 		cursor.transform.localPosition = new Vector3(0.0f, 0.0f, 2.0f);
-		cursor.GetComponent<MeshRenderer>().material.color = laserColor;
-		Object.DestroyImmediate(cursor.GetComponent<SphereCollider>());
+        cursor.GetComponent<MeshRenderer>().material = laserMaterial;
+        //cursor.GetComponent<MeshRenderer>().material.color = laserColor;
+        Object.DestroyImmediate(cursor.GetComponent<SphereCollider>());
 	}
 
 	public void AdjustLaserDistance ( float distance ) {
