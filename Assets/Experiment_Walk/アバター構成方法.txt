@@ -1,0 +1,35 @@
+2017.10.23時点　アバター構成
+M3DMale>M3DMale>hip>abdomenLower...
+		   >pelvis>lThighBend>lThighTwist>lShin>lFoot
+		   	  >rThighBend>rThighTwist>rShin>rFoot
+	       >M3DMale_LOD0
+	       >M3DMale_LOD1
+	       >M3DMale_LOD2
+	       >M3DMale_LOD3
+	       >Urban Metro Pants...
+	       >Urban Metro Shoes Left...
+	       >Urban Metro Shoes Right...
+	       >Urban Metro Vest...
+	       >Urban Metro T-Shirt...
+	       >[CameraRig]>Controller (left)
+			   >Controller (right)
+			   >Camera(head)>Camera(eye)
+					>Camera(ears)
+					>Fade
+	       >Camera>Fade
+
+※重要でない子要素は省略
+
+＜注意＞
+・Unityのバージョン変更を行うとM3DMaleのアセットはうまく動作しないことが多いため，下記に示すようにアバターに対するコンポーネントを再構築する必要がある．その際，M3DMaleアセットを削除し，再度Aseet StoreからImportし直す必要がある．
+・MORPH3D>Content>Packagesにあるパッケージをインストールし，MORPH3D>Content>M3DMale>Figure>M3DMale>M3DMale.fbxをSceneにインポートする．テクスチャなどが適用されない場合はAssetsフォルダのMORPH3DをReimportする．
+・アセットの再ImportによりM3DMaleのアバターの構成が変更されている場合，アバターに対するコンポーネントの構成方法やElec Animation Maleに記述されるGameObject.Find()メソッドの引数を修正する必要がある可能性がある．
+
+＜コンポーネント構成＞
+①M3DMaleのTransformはposition:0,0,0; Rotation:0,0,0; Scale:1,1,1;
+
+①最上層のM3DMaleにAnimator（Controller:Experiment_Walk，Avatar:M3DMaleAvatar），Audio Sourse（AudioClip:None，Output:announcement，Check:Bypass Reverb Zone, Play On Awake）, Elec Aniation Male(スクリプト)を付加
+
+②lFoot, rFootのそれぞれにAudioSource(AudioClip:FootSound2, Output:Foot，Check：None)を付加
+
+③カメラ類の子として配置された"Fade"はFadeマテリアルが付加されたQuadでそのマテリアル色をスクリプトにて変更している．（カメラのフェードイン・フェードアウト機能に使用）

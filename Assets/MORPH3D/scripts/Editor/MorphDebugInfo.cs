@@ -27,7 +27,7 @@ namespace AssemblyCSharpEditor
 
 			UnityEngine.Debug.Log ("Generated Morph Log in /MORPH3D/~Morph Logs/. Delete after sending to Morph3D");
 
-			ScreenCapture.CaptureScreenshot(directory + "/Screenshot.png");
+			Application.CaptureScreenshot(directory + "/Screenshot.png");
 
 			//Check the platform it is on
 			sr.WriteLine ("Application Platform: " + Application.platform);

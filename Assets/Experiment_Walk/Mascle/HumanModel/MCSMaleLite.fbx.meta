@@ -98,6 +98,7 @@ ModelImporter:
     100180: tongueBase
     100182: tongueTip
     100184: upperJaw
+    100186: Genesis2Male
     400000: abdomen
     400002: abdomen2
     400004: chest
@@ -191,6 +192,7 @@ ModelImporter:
     400180: tongueBase
     400182: tongueTip
     400184: upperJaw
+    400186: Genesis2Male
     4300000: Genesis2Male.Shape_LOD0
     4300002: Genesis2Male.Shape_LOD1
     4300004: Genesis2Male.Shape_LOD2
@@ -225,6 +227,7 @@ ModelImporter:
     13700010: Genesis2Male.Shape_LOD3
     13700012: Genesis2Male.Shape_LOD4
     13700014: Genesis2Male.Shape_LOD5
+    20500000: //RootNode
   materials:
     importMaterials: 1
     materialName: 0
@@ -235,6 +238,8 @@ ModelImporter:
     resampleCurves: 1
     optimizeGameObjects: 0
     motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 

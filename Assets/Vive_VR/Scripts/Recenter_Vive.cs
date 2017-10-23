@@ -7,22 +7,20 @@ using UnityEngine.SceneManagement;
 public class Recenter_Vive : MonoBehaviour
 {
 	public GameObject fade;
-    private float fadeTime;
+	private float fadeTime;
+
 	void Start ()
 	{
 		//fade = GameObject.Find (gameObject.name +  "/Camera(head)/Camera(eye)/Fade");
-        fadeTime = 2.0f;
-    }
-
+		fadeTime = 2.0f;
+	}
 
 	public void ResetCamera ()
 	{
-        //SteamVR.instance.hmd.ResetSeatedZeroPose (); //不安定？
-        Valve.VR.OpenVR.Compositor.SetTrackingSpace(Valve.VR.ETrackingUniverseOrigin.TrackingUniverseSeated);
-        Valve.VR.OpenVR.System.ResetSeatedZeroPose();
+		GameObject.Find ("[CameraRig]").transform.position -= (GameObject.Find ("[CameraRig]/Camera (head)/Camera (eye)").transform.position - GameObject.Find ("HeadPos").transform.position);
 		Debug.Log ("ResetPos");
 	}
-    /*
+	/*
 	public void FadeIn ()
 	{
         Debug.Log("Fade In Vive");
@@ -36,37 +34,35 @@ public class Recenter_Vive : MonoBehaviour
 	}
     */
     
-    public IEnumerator FadeIn()
-    {
-        Debug.Log("Fade In Vive");
-        float time = 0;
-        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 1);
-        while (time <= 1f)
-        {
-            time += Time.deltaTime;
-            fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 1 - time);
-            yield return null;
-        }
-        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 0);
-    }
+	public IEnumerator FadeIn ()
+	{
+		Debug.Log ("Fade In Vive");
+		float time = 0;
+		fade.GetComponent<MeshRenderer> ().material.color = new Color (0, 0, 0, 1);
+		while (time <= 1f) {
+			time += Time.deltaTime;
+			fade.GetComponent<MeshRenderer> ().material.color = new Color (0, 0, 0, 1 - time);
+			yield return null;
+		}
+		fade.GetComponent<MeshRenderer> ().material.color = new Color (0, 0, 0, 0);
+	}
 
-    public IEnumerator FadeOut()
-    {
-        Debug.Log("Fade Out Vive");
-        float time = 0;
-        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 0);
-        while (time <= 1f)
-        {
-            time += Time.deltaTime;
-            fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, time);
-            yield return null;
-        }
-        fade.GetComponent<MeshRenderer>().material.color = new Color(0, 0, 0, 1);
-    }
+	public IEnumerator FadeOut ()
+	{
+		Debug.Log ("Fade Out Vive");
+		float time = 0;
+		fade.GetComponent<MeshRenderer> ().material.color = new Color (0, 0, 0, 0);
+		while (time <= 1f) {
+			time += Time.deltaTime;
+			fade.GetComponent<MeshRenderer> ().material.color = new Color (0, 0, 0, time);
+			yield return null;
+		}
+		fade.GetComponent<MeshRenderer> ().material.color = new Color (0, 0, 0, 1);
+	}
 
-    public void SceneChange(string scene)
-    {
-        SteamVR_LoadLevel.Begin(scene);
-    }
+	public void SceneChange (string scene)
+	{
+		SteamVR_LoadLevel.Begin (scene);
+	}
 
 }
