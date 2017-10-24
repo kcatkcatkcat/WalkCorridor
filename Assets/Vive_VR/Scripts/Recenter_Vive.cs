@@ -8,11 +8,21 @@ public class Recenter_Vive : MonoBehaviour
 {
 	public GameObject fade;
 	private float fadeTime;
+	public bool resetPos;
+//Viveカメラを固定処理するかどうか#実験シーン以外は特定のGameObjectがないから使えない
 
 	void Start ()
 	{
 		//fade = GameObject.Find (gameObject.name +  "/Camera(head)/Camera(eye)/Fade");
 		fadeTime = 2.0f;
+	}
+
+	void Update ()
+	{
+		if (resetPos) {
+			GameObject.Find ("[CameraRig]").transform.position -= (GameObject.Find ("[CameraRig]/Camera (head)/Camera (eye)").transform.position - GameObject.Find ("HeadPos").transform.position);
+		}
+
 	}
 
 	public void ResetCamera ()
